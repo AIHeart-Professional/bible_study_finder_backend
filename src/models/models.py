@@ -83,6 +83,16 @@ class BibleChapterContentResponse(BaseModel):
     content: str
     verse_count: str
 
+class BibleChapterContentByVerseRequest(BaseModel):
+    """Model for a Bible chapter content by verse request."""
+    bible_id: str
+    verse_id: str
+
+class BibleChapterContentByVerseResponse(BaseModel):
+    """Model for a Bible chapter content by verse response."""
+    content: str
+    verse_number: str
+
 class CategoryResponse(BaseModel):
     """Model for category list response."""
     categories: List[str]

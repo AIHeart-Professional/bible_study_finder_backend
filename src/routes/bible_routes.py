@@ -5,7 +5,8 @@ from src.models import (
     BibleTranslationsResponse, BibleTranslationsRequest, 
     BibleBooksResponse, BibleBooksRequest, 
     BibleChaptersResponse, BibleChaptersRequest,
-    BibleChapterContentResponse, BibleChapterContentRequest)
+    BibleChapterContentResponse, BibleChapterContentRequest,
+    BibleChapterContentByVerseRequest)
 from src.controller.bible.bible_controller import BiblesController
 
 # Create a router for Bible-related routes
@@ -62,4 +63,14 @@ async def get_bible_chapter_content(BibleChapterContentRequest: BibleChapterCont
     results = await BiblesController().get_bible_chapter_content(BibleChapterContentRequest.bible_id, BibleChapterContentRequest.chapter_id)
     return results
 
+@router.get("/get_bible_chapter_content_by_verse", response_model=BibleChapterContentResponse)
+async def get_bible_chapter_content_by_verse(BibleChapterContentByVerseRequest: BibleChapterContentByVerseRequest):
+    """
+    Get the content of a specific verse.
     
+    Query Parameters:
+        bible_id: The ID of the bible to retrieve
+        verse_id: The ID of the verse to retrieve
+    """
+    results = await BiblesController().get_bible_chapter_content_by_verse(BibleChapterContentByVerseRequest.bible_id, BibleChapterContentByVerseRequest.chapter_id, BibleChapterContentByVerseRequest.verse_id)
+    return results

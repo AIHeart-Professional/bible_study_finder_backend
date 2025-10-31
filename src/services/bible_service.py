@@ -1,7 +1,7 @@
 from typing import List, Optional
 from src.models import (
     BibleTranslationsResponse, BibleBooksResponse, BibleChaptersResponse,
-    BibleChapterContentResponse, BibleChapterContentRequest
+    BibleChapterContentResponse, BibleChapterContentByVerseResponse
     )
 from src.utils.logger import get_logger
 from src.utils.config_loader import load_config
@@ -143,3 +143,28 @@ class BibleService:
             content=bible_chapter_content_data.get('content', ''),
             verse_count=bible_chapter_content_data.get('verseCount', ''),
         )
+
+    async def get_chapter_content_by_verse(self, bible_id: str, verse_id: str) -> List[BibleChapterContentByVerseResponse]:
+        """Get the content of a specific verse."""
+        try:
+            url = f"{self.base_url}/bibles/{bible_id}/verses/{verse_id}"
+            response = requests.get(
+                url,
+                headers=self.headers,
+                timeout=10
+            )
+            if response.status_code == 200:
+                return response.json()['data']
+            else:
+                self.logger.error(f"API returned status code for chapter content by verse: {response.status_code}: {response.text}")
+                return []
+        except Exception as e:
+            self.logger.error(f"Error fetching chapter content by verse from API: {e}")
+            return []
+
+    async def _convert_to_bible_chapter_content_by_verse_response(self, bible_chapter_content_by_verse_data: dict) -> BibleChapterContentByVerseResponse:
+        """Convert API.Bible format to our BibleChapterContentByVerseResponse format."""
+        return BibleChapterContentByVerseResponse(
+            content=bible_chapter_content_by_verse_data.get('content', ''),
+            verse_number=bible_chapter_content_by_verse_data.get('verseNumber', ''),
+        )       

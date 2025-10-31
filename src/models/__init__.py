@@ -19,6 +19,8 @@ from .models import (
     BibleChaptersResponse,
     BibleChapterContentRequest,
     BibleChapterContentResponse,
+    BibleChapterContentByVerseRequest,
+    BibleChapterContentByVerseResponse,
     CreateGroupRequest,
     Group
 )
@@ -42,4 +44,6 @@ __all__ = [
     "BibleChaptersResponse",
     "BibleChapterContentRequest",
     "BibleChapterContentResponse",
+    "BibleChapterContentByVerseRequest",
+    "BibleChapterContentByVerseResponse",
 ]

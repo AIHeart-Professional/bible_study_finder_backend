@@ -1,7 +1,7 @@
 """Bible controller - Business logic layer."""
 from typing import List, Optional
 from src.models import (BibleTranslationsResponse, BibleBooksResponse, 
-BibleChaptersResponse, BibleChapterContentResponse)
+BibleChaptersResponse, BibleChapterContentResponse, BibleChapterContentByVerseResponse)
 from src.utils.logger import get_logger
 from src.services.bible_service import BibleService
 
@@ -82,3 +82,19 @@ class BiblesController:
         except Exception as e:
             self.logger.error(f"Error fetching bible chapter content from API: {e}")
             return []   
+
+    async def get_bible_chapter_content_by_verse(self, bible_id: str, verse_id: str) -> BibleChapterContentResponse:
+        """
+        Get the content of a specific verse.
+        
+        Args:
+            bible_id: The ID of the bible to retrieve
+            chapter_id: The ID of the chapter to retrieve
+            verse_id: The ID of the verse to retrieve
+        """
+        try:
+            content = await self.bible_service.get_chapter_content_by_verse(bible_id, chapter_id, verse_id)
+            return await BibleService()._convert_to_bible_chapter_content_by_verse_response(content)
+        except Exception as e:
+            self.logger.error(f"Error fetching bible chapter content by verse from API: {e}")
+            return []
