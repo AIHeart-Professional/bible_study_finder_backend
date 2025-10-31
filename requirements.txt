@@ -1,0 +1,24 @@
+# Core FastAPI dependencies (Python 3.13 compatible versions)
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# CORS handling
+python-multipart>=0.0.6
+
+# Data validation and serialization  
+pydantic>=2.5.0
+
+# HTTP client for external API calls
+requests>=2.31.0
+
+# Environment and configuration
+python-dotenv>=1.0.0
+
+# Additional useful packages
+python-dateutil>=2.8.2
+
+# YAML parsing
+pyyaml>=6.0.0
+
+# Colored terminal output
+colorama>=0.4.6

@@ -1,0 +1,100 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug FastAPI (Development)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "python": "C:\\Users\\Chibi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG": "true",
+                "ENVIRONMENT": "development"
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug FastAPI with Uvicorn Module (Development)",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "python": "C:\\Users\\Chibi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+            "args": [
+                "main:app",
+                "--host", "0.0.0.0",
+                "--port", "8000",
+                "--reload",
+                "--log-level", "debug"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG": "true",
+                "ENVIRONMENT": "development"
+            },
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug FastAPI with Uvicorn Module (Production)",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "python": "C:\\Users\\Chibi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+            "args": [
+                "main:app",
+                "--host", "0.0.0.0",
+                "--port", "8000",
+                "--log-level", "info"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG": "false",
+                "ENVIRONMENT": "production"
+            },
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug API Route Module",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "python": "C:\\Users\\Chibi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+            "args": [
+                "api_route:create_app",
+                "--host", "0.0.0.0",
+                "--port", "8000",
+                "--reload",
+                "--log-level", "debug"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG": "true",
+                "ENVIRONMENT": "development"
+            },
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug Simple Test Server",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/simple_test.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "python": "C:\\Users\\Chibi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG": "true"
+            },
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

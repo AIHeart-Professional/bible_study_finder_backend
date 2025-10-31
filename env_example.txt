@@ -1,0 +1,35 @@
+# Environment configuration for Bible Study Finder Backend
+# Copy this file to .env for debugging and development
+
+# Environment Mode
+DEBUG=true
+ENVIRONMENT=development
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8000
+
+# CORS Settings for Development
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:58080
+PRODUCTION_ALLOWED_ORIGINS=https://yourdomain.com
+
+# Database Configuration (when implemented)
+# DATABASE_URL=sqlite:///./bible_study.db
+# DATABASE_URL=postgresql://user:password@localhost/bible_study
+# DATABASE_URL=mysql://user:password@localhost/bible_study
+
+# API Configuration
+API_V1_STR=/api/v1
+PROJECT_NAME=Bible Study Finder API
+VERSION=1.0.0
+
+# Logging
+LOG_LEVEL=debug
+
+# Security (for future use)
+# SECRET_KEY=your-secret-key-here
+# ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# External APIs (for future integration)
+# BIBLE_API_KEY=your-bible-api-key
+# OPENAI_API_KEY=your-openai-key

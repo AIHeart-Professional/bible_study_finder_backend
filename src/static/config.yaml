@@ -1,0 +1,37 @@
+# Bible Study Finder Backend Configuration
+# This file uses environment variables for sensitive data
+# Set these environment variables in your system or .env file
+
+apis:
+  bible_api: "https://api.scripture.api.bible/v1"
+  frontend_url: "${FRONTEND_URL:http://localhost:3000}"
+
+keys:
+  bible_api_key: "${BIBLE_API_KEY}"
+  jwt_secret: "${JWT_SECRET}"
+  encryption_key: "${ENCRYPTION_KEY}"
+
+database:
+  host: "${DB_HOST:localhost}"
+  port: "${DB_PORT:5432}"
+  name: "${DB_NAME:bible_study_finder}"
+  user: "${DB_USER:postgres}"
+  password: "${DB_PASSWORD}"
+  url: "${DATABASE_URL}"
+
+logging:
+  level: "${LOG_LEVEL:INFO}"
+  file_output: "${LOG_FILE_OUTPUT:true}"
+  console_output: "${LOG_CONSOLE_OUTPUT:true}"
+  log_file: "${LOG_FILE:logs/bible_study_backend.log}"
+
+server:
+  host: "${SERVER_HOST:0.0.0.0}"
+  port: "${SERVER_PORT:8000}"
+  debug: "${DEBUG:false}"
+  environment: "${ENVIRONMENT:development}"
+
+cors:
+  allowed_origins: "${CORS_ORIGINS:http://localhost:3000,http://localhost:8080}"
+  allowed_methods: "${CORS_METHODS:GET,POST,PUT,DELETE,OPTIONS}"
+  allowed_headers: "${CORS_HEADERS:*}"
