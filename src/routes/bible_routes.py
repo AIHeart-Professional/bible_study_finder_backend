@@ -61,3 +61,5 @@ async def get_bible_chapter_content(BibleChapterContentRequest: BibleChapterCont
     """
     results = await BiblesController().get_bible_chapter_content(BibleChapterContentRequest.bible_id, BibleChapterContentRequest.chapter_id)
     return results
+
+    
