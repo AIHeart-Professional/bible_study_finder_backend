@@ -1,5 +1,5 @@
 from typing import List, Optional
-from src.models import (
+from src.models.bible import (
     BibleTranslationsResponse, BibleBooksResponse, BibleChaptersResponse,
     BibleChapterContentResponse, BibleChapterContentByVerseResponse
     )

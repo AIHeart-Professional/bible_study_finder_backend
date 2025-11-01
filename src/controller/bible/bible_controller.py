@@ -1,11 +1,11 @@
 """Bible controller - Business logic layer."""
 from typing import List, Optional
-from src.models import (BibleTranslationsResponse, BibleBooksResponse, 
+from src.models.bible import (BibleTranslationsResponse, BibleBooksResponse, 
 BibleChaptersResponse, BibleChapterContentResponse, BibleChapterContentByVerseResponse)
 from src.utils.logger import get_logger
 from src.services.bible_service import BibleService
 
-class BiblesController:
+class BibleController:
     """Controller for handling Bible business logic."""
     
     def __init__(self):

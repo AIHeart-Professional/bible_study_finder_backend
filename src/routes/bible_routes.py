@@ -1,13 +1,13 @@
 """Bible routes - HTTP layer."""
 from typing import List, Optional
 from fastapi import APIRouter, Query
-from src.models import (
+from src.models.bible import (
     BibleTranslationsResponse, BibleTranslationsRequest, 
     BibleBooksResponse, BibleBooksRequest, 
     BibleChaptersResponse, BibleChaptersRequest,
     BibleChapterContentResponse, BibleChapterContentRequest,
     BibleChapterContentByVerseRequest)
-from src.controller.bible.bible_controller import BiblesController
+from src.controller.bible import BibleController
 
 # Create a router for Bible-related routes
 router = APIRouter()
@@ -24,7 +24,7 @@ async def get_bibles(BibleTranslationsRequest: BibleTranslationsRequest):
     Returns:
         List of BibleResponse objects
     """
-    results = await BiblesController().get_bibles(BibleTranslationsRequest.language)
+    results = await BibleController().get_bibles(BibleTranslationsRequest.language)
     return results
 
 @router.get("/get_bible_books", response_model=List[BibleBooksResponse])
@@ -35,7 +35,7 @@ async def get_bible_books(BibleBooksRequest: BibleBooksRequest):
     Query Parameters:
         bible_id: The ID of the bible to retrieve
     """
-    results = await BiblesController().get_bible_books(BibleBooksRequest.bible_id)
+    results = await BibleController().get_bible_books(BibleBooksRequest.bible_id)
     return results
 
 
@@ -48,7 +48,7 @@ async def get_bible_chapters(BibleChaptersRequest: BibleChaptersRequest):
         bible_id: The ID of the bible to retrieve
         book_id: The ID of the book to retrieve
     """
-    results = await BiblesController().get_bible_chapters(BibleChaptersRequest.bible_id, BibleChaptersRequest.book_id)
+    results = await BibleController().get_bible_chapters(BibleChaptersRequest.bible_id, BibleChaptersRequest.book_id)
     return results
 
 @router.get("/get_bible_chapter_content", response_model=BibleChapterContentResponse)
@@ -60,7 +60,7 @@ async def get_bible_chapter_content(BibleChapterContentRequest: BibleChapterCont
         bible_id: The ID of the bible to retrieve
         chapter_id: The ID of the chapter to retrieve
     """
-    results = await BiblesController().get_bible_chapter_content(BibleChapterContentRequest.bible_id, BibleChapterContentRequest.chapter_id)
+    results = await BibleController().get_bible_chapter_content(BibleChapterContentRequest.bible_id, BibleChapterContentRequest.chapter_id)
     return results
 
 @router.get("/get_bible_chapter_content_by_verse", response_model=BibleChapterContentResponse)
@@ -72,5 +72,5 @@ async def get_bible_chapter_content_by_verse(BibleChapterContentByVerseRequest: 
         bible_id: The ID of the bible to retrieve
         verse_id: The ID of the verse to retrieve
     """
-    results = await BiblesController().get_bible_chapter_content_by_verse(BibleChapterContentByVerseRequest.bible_id, BibleChapterContentByVerseRequest.chapter_id, BibleChapterContentByVerseRequest.verse_id)
+    results = await BibleController().get_bible_chapter_content_by_verse(BibleChapterContentByVerseRequest.bible_id, BibleChapterContentByVerseRequest.chapter_id, BibleChapterContentByVerseRequest.verse_id)
     return results
