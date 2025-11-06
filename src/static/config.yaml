@@ -17,7 +17,7 @@ database:
   name: "${DB_NAME:bible_study_finder}"
   user: "${DB_USER:postgres}"
   password: "${DB_PASSWORD}"
-  url: "${DATABASE_URL}"
+  url: "${DATABASE_URL:mongodb://localhost:27017}"
 
 logging:
   level: "${LOG_LEVEL:INFO}"

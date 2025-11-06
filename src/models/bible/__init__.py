@@ -2,7 +2,7 @@
 Models package for Bible Study Finder Backend.
 """
 
-from .models import (
+from .bible_models import (
     BibleStudyResource,
     SearchQuery,
     CreateResourceRequest,
