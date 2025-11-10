@@ -11,7 +11,9 @@ from src.models.groups import (
     GetGroupResponse,
     CreateGroupChatResponse,
     CreateWorksheetResponse,
-    GetWorksheetsResponse
+    GetWorksheetsResponse,
+    JoinGroupResponse,
+    LeaveGroupResponse
 )
 from src.utils.logger import get_logger
 from src.services.groups_service import GroupsService
@@ -29,7 +31,8 @@ class GroupsController:
         name: str,
         description: str,
         leaderUserId: str,
-        location: dict
+        location: dict,
+        image: Optional[str] = None
     ) -> CreateGroupResponse:
         """Create a new group."""
         try:
@@ -37,7 +40,8 @@ class GroupsController:
                 name=name,
                 description=description,
                 leaderUserId=leaderUserId,
-                location=location
+                location=location,
+                image=image
             )
             
             return CreateGroupResponse(
@@ -72,19 +76,21 @@ class GroupsController:
     async def get_group_users(self, groupId: str) -> GetUsersResponse:
         """Get all users in a group."""
         try:
-            success, message, users = await self.groups_service.get_group_users(groupId)
+            success, message, users, member_count = await self.groups_service.get_group_users(groupId)
             
             return GetUsersResponse(
                 success=success,
                 message=message,
-                users=users
+                users=users,
+                memberCount=member_count
             )
         except Exception as e:
             self.logger.error(f"Error in get_group_users controller: {e}")
             return GetUsersResponse(
                 success=False,
                 message=f"Error getting group users: {str(e)}",
-                users=[]
+                users=[],
+                memberCount=0
             )
     
     async def get_group_chat(self, groupId: str) -> GetChatResponse:
@@ -177,6 +183,24 @@ class GroupsController:
                 group=None
             )
     
+    async def get_groups_by_user_id(self, userId: str) -> GetGroupsResponse:
+        """Get all groups that a user is a member of."""
+        try:
+            success, message, groups = await self.groups_service.get_groups_by_user_id(userId)
+            
+            return GetGroupsResponse(
+                success=success,
+                message=message,
+                groups=groups
+            )
+        except Exception as e:
+            self.logger.error(f"Error in get_groups_by_user_id controller: {e}")
+            return GetGroupsResponse(
+                success=False,
+                message=f"Error getting user groups: {str(e)}",
+                groups=[]
+            )
+    
     async def create_group_chat(
         self,
         groupId: str,
@@ -247,4 +271,50 @@ class GroupsController:
                 success=False,
                 message=f"Error getting group worksheets: {str(e)}",
                 worksheets=[]
+            )
+    
+    async def join_group(
+        self,
+        groupId: str,
+        userId: str
+    ) -> JoinGroupResponse:
+        """Join a group."""
+        try:
+            success, message = await self.groups_service.join_group(
+                groupId=groupId,
+                userId=userId
+            )
+            
+            return JoinGroupResponse(
+                success=success,
+                message=message
+            )
+        except Exception as e:
+            self.logger.error(f"Error in join_group controller: {e}")
+            return JoinGroupResponse(
+                success=False,
+                message=f"Error joining group: {str(e)}"
+            )
+    
+    async def leave_group(
+        self,
+        groupId: str,
+        userId: str
+    ) -> LeaveGroupResponse:
+        """Leave a group."""
+        try:
+            success, message = await self.groups_service.leave_group(
+                groupId=groupId,
+                userId=userId
+            )
+            
+            return LeaveGroupResponse(
+                success=success,
+                message=message
+            )
+        except Exception as e:
+            self.logger.error(f"Error in leave_group controller: {e}")
+            return LeaveGroupResponse(
+                success=False,
+                message=f"Error leaving group: {str(e)}"
             )

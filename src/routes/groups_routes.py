@@ -1,5 +1,5 @@
 """Groups routes - HTTP layer."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Query, Depends
 from src.models.groups import (
     CreateGroupRequest,
     CreateGroupResponse,
@@ -20,7 +20,11 @@ from src.models.groups import (
     CreateWorksheetRequest,
     CreateWorksheetResponse,
     GetWorksheetsRequest,
-    GetWorksheetsResponse
+    GetWorksheetsResponse,
+    JoinGroupRequest,
+    JoinGroupResponse,
+    LeaveGroupRequest,
+    LeaveGroupResponse
 )
 from src.controller.groups import GroupsController
 
@@ -40,12 +44,12 @@ async def get_groups():
     return await controller.get_all_groups()
 
 
-@router.get("/get_groups/{groupId}", response_model=GetGroupResponse)
+@router.get("/get_group", response_model=GetGroupResponse)
 async def get_group(groupId: str):
     """
     Get a single group by ID.
     
-    Path Parameters:
+    Query Parameters:
         groupId: ID of the group to retrieve
     
     Returns:
@@ -53,6 +57,21 @@ async def get_group(groupId: str):
     """
     controller = GroupsController()
     return await controller.get_group(groupId=groupId)
+
+
+@router.get("/get_user_groups", response_model=GetGroupsResponse)
+async def get_groups_by_user_id(userId: str = Query(...)):
+    """
+    Get all groups that a user is a member of.
+    
+    Query Parameters:
+        userId: ID of the user
+    
+    Returns:
+        GetGroupsResponse with list of groups the user is a member of
+    """
+    controller = GroupsController()
+    return await controller.get_groups_by_user_id(userId=userId)
 
 
 @router.post("/create_group", response_model=CreateGroupResponse)
@@ -65,6 +84,7 @@ async def create_group(request: CreateGroupRequest):
         description: Group description
         leaderUserId: ID of the group leader
         location: Location information
+        image: Optional image URL
     
     Returns:
         CreateGroupResponse with creation status and group ID
@@ -74,7 +94,8 @@ async def create_group(request: CreateGroupRequest):
         name=request.name,
         description=request.description,
         leaderUserId=request.leaderUserId,
-        location=request.location.dict()
+        location=request.location.dict(),
+        image=request.image
     )
 
 
@@ -109,7 +130,7 @@ async def get_users(request: GetUsersRequest):
 
 
 @router.get("/get_chat", response_model=GetChatResponse)
-async def get_chat(request: GetChatRequest):
+async def get_chat(request: GetChatRequest = Depends()):
     """
     Get all chat messages for a group.
     
@@ -196,7 +217,7 @@ async def create_worksheet(request: CreateWorksheetRequest):
 
 
 @router.get("/get_worksheets", response_model=GetWorksheetsResponse)
-async def get_worksheets(request: GetWorksheetsRequest):
+async def get_worksheets(request: GetWorksheetsRequest = Depends()):
     """
     Get all worksheets for a group.
     
@@ -208,3 +229,41 @@ async def get_worksheets(request: GetWorksheetsRequest):
     """
     controller = GroupsController()
     return await controller.get_group_worksheets(groupId=request.groupId)
+
+
+@router.post("/join_group", response_model=JoinGroupResponse)
+async def join_group(request: JoinGroupRequest):
+    """
+    Join a group.
+    
+    Request Body:
+        groupId: ID of the group to join
+        userId: ID of the user joining
+    
+    Returns:
+        JoinGroupResponse with join status
+    """
+    controller = GroupsController()
+    return await controller.join_group(
+        groupId=request.groupId,
+        userId=request.userId
+    )
+
+
+@router.post("/leave_group", response_model=LeaveGroupResponse)
+async def leave_group(request: LeaveGroupRequest):
+    """
+    Leave a group.
+    
+    Request Body:
+        groupId: ID of the group to leave
+        userId: ID of the user leaving
+    
+    Returns:
+        LeaveGroupResponse with leave status
+    """
+    controller = GroupsController()
+    return await controller.leave_group(
+        groupId=request.groupId,
+        userId=request.userId
+    )

@@ -2,11 +2,6 @@
 
 A FastAPI-based backend service for the Bible Study Finder application.
 
-## Launch Application
-
-- **flutter emulators --launch Pixel_7**
-- **flutter run -d emulator-5554**
-
 ## Features
 
 - **FastAPI Framework**: Modern, fast web framework for building APIs

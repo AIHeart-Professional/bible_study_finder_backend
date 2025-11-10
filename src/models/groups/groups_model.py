@@ -51,6 +51,7 @@ class Group(BaseModel):
     description: str
     leaderUserId: str
     location: Location
+    image: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
 
@@ -61,6 +62,7 @@ class CreateGroupRequest(BaseModel):
     description: str
     leaderUserId: str
     location: Location
+    image: Optional[str] = None
 
 class InitializeGroupRequest(BaseModel):
     """Model for initializing a group."""
@@ -99,6 +101,7 @@ class GetUsersResponse(BaseModel):
     success: bool
     message: str
     users: List[GroupMember] = []
+    memberCount: int = 0
 
 class GetChatResponse(BaseModel):
     """Model for get chat response."""
@@ -213,6 +216,7 @@ class GetGroupMembersResponse(BaseModel):
     success: bool
     message: str
     members: List[GroupMember] = []
+    memberCount: int = 0
 
 class GetGroupMemberRequest(BaseModel):
     """Model for getting a group member."""
@@ -225,13 +229,23 @@ class GetGroupMemberResponse(BaseModel):
     message: str
     member: GroupMember
 
-class GetGroupMembersRequest(BaseModel):
-    """Model for getting group members."""
+class JoinGroupRequest(BaseModel):
+    """Model for joining a group."""
     groupId: str
+    userId: str
 
-class GetGroupMembersResponse(BaseModel):
-    """Model for get group members response."""
+class JoinGroupResponse(BaseModel):
+    """Model for join group response."""
     success: bool
     message: str
-    members: List[GroupMember] = []
+
+class LeaveGroupRequest(BaseModel):
+    """Model for leaving a group."""
+    groupId: str
+    userId: str
+
+class LeaveGroupResponse(BaseModel):
+    """Model for leave group response."""
+    success: bool
+    message: str
     
