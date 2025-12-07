@@ -6,7 +6,11 @@ from src.models.users import (
     login_user_request,
     login_user_response,
     get_user_response,
-    get_user_request
+    get_user_request,
+    register_fcm_token_request,
+    register_fcm_token_response,
+    unregister_fcm_token_request,
+    unregister_fcm_token_response
 )
 from src.controller.users import UsersController
 
@@ -73,3 +77,34 @@ async def get_user(request: get_user_request):
     """
     controller = UsersController()
     return await controller.get_user(username=request.username)
+
+
+@router.post("/register_fcm_token", response_model=register_fcm_token_response)
+async def register_fcm_token(request: register_fcm_token_request):
+    """
+    Register FCM token for push notifications.
+    
+    Request Body:
+        userId: User's ID
+        fcmToken: Firebase Cloud Messaging token
+    
+    Returns:
+        register_fcm_token_response with registration status
+    """
+    controller = UsersController()
+    return await controller.register_fcm_token(request)
+
+
+@router.post("/unregister_fcm_token", response_model=unregister_fcm_token_response)
+async def unregister_fcm_token(request: unregister_fcm_token_request):
+    """
+    Unregister FCM token for a user.
+    
+    Request Body:
+        userId: User's ID
+    
+    Returns:
+        unregister_fcm_token_response with unregistration status
+    """
+    controller = UsersController()
+    return await controller.unregister_fcm_token(request)

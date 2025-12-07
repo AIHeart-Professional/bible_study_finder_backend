@@ -46,3 +46,22 @@ class get_user_response(BaseModel):
     """Model for user information response."""
     user: Optional[User]
     message: str
+
+class register_fcm_token_request(BaseModel):
+    """Model for registering FCM token."""
+    userId: str
+    fcmToken: str
+
+class register_fcm_token_response(BaseModel):
+    """Model for FCM token registration response."""
+    success: bool
+    message: str
+
+class unregister_fcm_token_request(BaseModel):
+    """Model for unregistering FCM token."""
+    userId: str
+
+class unregister_fcm_token_response(BaseModel):
+    """Model for FCM token unregistration response."""
+    success: bool
+    message: str

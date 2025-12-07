@@ -27,7 +27,8 @@ class GroupsDatabase:
         self.worksheets_collection = self.db.bibleworksheets
         self.roles_collection = self.db.roles
         self.permissions_collection = self.db.permissions
-        self.group_roles_collection = self.db.grouproles
+        self.group_roles_collection = self.db.groupRoles
+        self.group_requests_collection = self.db.groupRequests
         self._initialize_database()
     
     def _initialize_database(self):
@@ -37,13 +38,16 @@ class GroupsDatabase:
             self.memberships_collection.create_index([("groupId", 1), ("userId", 1)], unique=True)
             self.memberships_collection.create_index("groupId")
             self.memberships_collection.create_index("userId")
+            self.memberships_collection.create_index("groupRoleId")
             self.chats_collection.create_index("groupId")
             self.worksheets_collection.create_index("groupId")
             self.roles_collection.create_index("name", unique=True)
             self.permissions_collection.create_index("action", unique=True)
-            self.group_roles_collection.create_index([("groupId", 1), ("userId", 1)], unique=True)
+            self.group_roles_collection.create_index([("groupId", 1), ("roleName", 1)], unique=True)
             self.group_roles_collection.create_index("groupId")
-            self.group_roles_collection.create_index("userId")
+            self.group_requests_collection.create_index("groupId")
+            self.group_requests_collection.create_index("userId")
+            self.group_requests_collection.create_index([("groupId", 1), ("userId", 1)])
             self.logger.info("Groups database initialized successfully")
         except Exception as e:
             self.logger.error(f"Error initializing groups database: {e}")
@@ -126,7 +130,7 @@ class GroupsDatabase:
             return None
     
     async def get_group_members(self, groupId: str) -> List[dict]:
-        """Get all members of a group."""
+        """Get all members of a group with role information."""
         try:
             memberships = self.memberships_collection.find({'groupId': ObjectId(groupId)})
             members = []
@@ -135,10 +139,25 @@ class GroupsDatabase:
                 del membership['_id']
                 membership['groupId'] = str(membership['groupId'])
                 membership['userId'] = str(membership['userId'])
+                
+                if 'groupRoleId' in membership:
+                    group_role_id = str(membership['groupRoleId'])
+                    membership['groupRoleId'] = group_role_id
+                    group_role = await self.get_group_role_config_by_id(group_role_id)
+                    if group_role:
+                        membership['role'] = group_role['roleName']
+                        membership['permissions'] = group_role['permissions']
+                    else:
+                        membership['role'] = 'member'
+                        membership['permissions'] = []
+                else:
+                    membership['role'] = 'member'
+                    membership['permissions'] = []
+                
                 members.append(membership)
             return members
         except Exception as e:
-            self.logger.error(f"Error fetching group members: {e}")
+            self.logger.error(f"Error fetching group members: {e}", exc_info=True)
             return []
     
     async def get_group_chats(self, groupId: str) -> List[dict]:
@@ -278,17 +297,19 @@ class GroupsDatabase:
                 self.logger.warning(f"User {userId} is already a member of group {groupId}")
                 return False
             
+            group_role = await self._get_or_create_member_role(groupId)
+            
             membership_doc = {
                 'groupId': ObjectId(groupId),
                 'userId': ObjectId(userId),
-                'role': 'member',
+                'groupRoleId': ObjectId(group_role['id']),
                 'joinedAt': datetime.utcnow()
             }
             result = self.memberships_collection.insert_one(membership_doc)
             self.logger.info(f"User {userId} joined group {groupId} with membership ID: {result.inserted_id}")
             return True
         except Exception as e:
-            self.logger.error(f"Error joining group: {e}")
+            self.logger.error(f"Error joining group: {e}", exc_info=True)
             return False
     
     async def leave_group(
@@ -298,12 +319,12 @@ class GroupsDatabase:
     ) -> bool:
         """Leave a group by removing the membership record."""
         try:
-            result = self.memberships_collection.delete_one({
+            membership_result = self.memberships_collection.delete_one({
                 'groupId': ObjectId(groupId),
                 'userId': ObjectId(userId)
             })
             
-            if result.deleted_count > 0:
+            if membership_result.deleted_count > 0:
                 self.logger.info(f"User {userId} left group {groupId}")
                 return True
             else:
@@ -501,58 +522,58 @@ class GroupsDatabase:
         groupId: str,
         role: str
     ) -> Optional[str]:
-        """Assign a role to a user in a group."""
+        """Assign a role to a user in a group by updating their membership."""
         try:
-            # Check if role exists
-            role_doc = await self.get_role_by_name(role)
-            if not role_doc:
-                self.logger.error(f"Role '{role}' does not exist")
-                return None
+            self.logger.debug(f"create_group_role called with userId={userId}, groupId={groupId}, role={role}")
             
-            # Check if group role already exists
-            existing = self.group_roles_collection.find_one({
+            group_role_config = await self.get_group_role_config_by_name(groupId, role)
+            if not group_role_config:
+                self.logger.warning(f"Group role config not found for role '{role}' in group {groupId}, creating default")
+                base_role = await self.get_role_by_name(role)
+                if not base_role:
+                    self.logger.error(f"Base role '{role}' does not exist")
+                    return None
+                
+                group_role_id = await self.create_group_role_config(
+                    groupId=groupId,
+                    roleName=role,
+                    permissions=base_role.get('permissions', [])
+                )
+                if not group_role_id:
+                    return None
+                group_role_config = await self.get_group_role_config_by_id(group_role_id)
+            
+            existing = self.memberships_collection.find_one({
                 'groupId': ObjectId(groupId),
                 'userId': ObjectId(userId)
             })
             
             if existing:
-                # Check if role name matches - extract role from existing document
-                existing_role = existing.get('role')
-                if existing_role and existing_role == role:
-                    self.logger.info(f"Group role already exists with same role '{role}' for user {userId} in group {groupId}")
-                    return str(existing['_id'])
-                
-                # Role name doesn't match or doesn't exist, update it
-                result = self.group_roles_collection.update_one(
+                result = self.memberships_collection.update_one(
                     {
                         'groupId': ObjectId(groupId),
                         'userId': ObjectId(userId)
                     },
                     {
-                        '$set': {'role': role}
+                        '$set': {'groupRoleId': ObjectId(group_role_config['id'])}
                     }
                 )
-                if result.modified_count > 0:
-                    old_role = existing_role if existing_role else 'none'
-                    self.logger.info(f"Updated group role for user {userId} in group {groupId} from '{old_role}' to '{role}'")
-                    return str(existing['_id'])
-                elif result.matched_count > 0:
-                    # Document matched but wasn't modified (same role)
-                    self.logger.info(f"Group role already set to '{role}' for user {userId} in group {groupId}")
+                if result.modified_count > 0 or result.matched_count > 0:
+                    self.logger.info(f"Updated membership role for user {userId} in group {groupId} to '{role}'")
                     return str(existing['_id'])
                 return None
             else:
-                # Create new group role
-                group_role_doc = {
+                membership_doc = {
                     'userId': ObjectId(userId),
                     'groupId': ObjectId(groupId),
-                    'role': role
+                    'groupRoleId': ObjectId(group_role_config['id']),
+                    'joinedAt': datetime.utcnow()
                 }
-                result = self.group_roles_collection.insert_one(group_role_doc)
-                self.logger.info(f"Group role created successfully with ID: {result.inserted_id}")
+                result = self.memberships_collection.insert_one(membership_doc)
+                self.logger.info(f"Membership created with role '{role}' for user {userId} in group {groupId}, ID: {result.inserted_id}")
                 return str(result.inserted_id)
         except Exception as e:
-            self.logger.error(f"Error creating group role: {e}")
+            self.logger.error(f"Error creating group role: {e}", exc_info=True)
             return None
     
     async def update_group_role(
@@ -561,93 +582,145 @@ class GroupsDatabase:
         groupId: str,
         role: str
     ) -> bool:
-        """Update a group role."""
+        """Update a group role by updating the membership."""
         try:
-            # Check if role exists
-            role_doc = await self.get_role_by_name(role)
-            if not role_doc:
-                self.logger.error(f"Role '{role}' does not exist")
-                return False
+            self.logger.debug(f"update_group_role called with userId={userId}, groupId={groupId}, role={role}")
             
-            result = self.group_roles_collection.update_one(
+            group_role_config = await self.get_group_role_config_by_name(groupId, role)
+            if not group_role_config:
+                self.logger.warning(f"Group role config not found for role '{role}' in group {groupId}, creating default")
+                base_role = await self.get_role_by_name(role)
+                if not base_role:
+                    self.logger.error(f"Base role '{role}' does not exist")
+                    return False
+                
+                group_role_id = await self.create_group_role_config(
+                    groupId=groupId,
+                    roleName=role,
+                    permissions=base_role.get('permissions', [])
+                )
+                if not group_role_id:
+                    return False
+                group_role_config = await self.get_group_role_config_by_id(group_role_id)
+            
+            result = self.memberships_collection.update_one(
                 {
                     'groupId': ObjectId(groupId),
                     'userId': ObjectId(userId)
                 },
                 {
-                    '$set': {'role': role}
+                    '$set': {'groupRoleId': ObjectId(group_role_config['id'])}
                 }
             )
             
             if result.modified_count > 0:
-                self.logger.info(f"Updated group role for user {userId} in group {groupId} to {role}")
+                self.logger.info(f"Updated membership role for user {userId} in group {groupId} to {role}")
                 return True
             else:
-                self.logger.warning(f"Group role not found for user {userId} in group {groupId}")
+                self.logger.warning(f"Membership not found for user {userId} in group {groupId}")
                 return False
         except Exception as e:
-            self.logger.error(f"Error updating group role: {e}")
+            self.logger.error(f"Error updating group role: {e}", exc_info=True)
             return False
     
     async def get_group_roles(self, groupId: Optional[str] = None, userId: Optional[str] = None) -> List[dict]:
-        """Get group roles, optionally filtered by groupId or userId."""
+        """Get group roles from memberships with role details, optionally filtered by groupId or userId."""
         try:
+            self.logger.debug(f"get_group_roles called with groupId={groupId}, userId={userId}")
+            
             query = {}
             if groupId:
                 query['groupId'] = ObjectId(groupId)
             if userId:
                 query['userId'] = ObjectId(userId)
             
-            group_roles = self.group_roles_collection.find(query)
+            memberships = self.memberships_collection.find(query)
             role_list = []
-            for group_role in group_roles:
-                group_role['id'] = str(group_role['_id'])
-                del group_role['_id']
-                group_role['userId'] = str(group_role['userId'])
-                group_role['groupId'] = str(group_role['groupId'])
-                role_list.append(group_role)
+            for membership in memberships:
+                role_data = {
+                    'id': str(membership['_id']),
+                    'userId': str(membership['userId']),
+                    'groupId': str(membership['groupId']),
+                }
+                
+                if 'groupRoleId' in membership:
+                    group_role = await self.get_group_role_config_by_id(str(membership['groupRoleId']))
+                    if group_role:
+                        role_data['role'] = group_role['roleName']
+                        role_data['permissions'] = group_role['permissions']
+                    else:
+                        role_data['role'] = 'member'
+                        role_data['permissions'] = []
+                else:
+                    role_data['role'] = 'member'
+                    role_data['permissions'] = []
+                
+                role_list.append(role_data)
+            
+            self.logger.debug(f"Found {len(role_list)} group role(s)")
             return role_list
         except Exception as e:
-            self.logger.error(f"Error fetching group roles: {e}")
+            self.logger.error(f"Error fetching group roles: {e}", exc_info=True)
             return []
     
     async def remove_group_role(self, userId: str, groupId: str) -> bool:
-        """Remove a role from a user in a group."""
+        """Remove a role from a user in a group by setting role back to 'member'."""
         try:
-            result = self.group_roles_collection.delete_one({
-                'groupId': ObjectId(groupId),
-                'userId': ObjectId(userId)
-            })
+            self.logger.debug(f"remove_group_role called with userId={userId}, groupId={groupId}")
             
-            if result.deleted_count > 0:
-                self.logger.info(f"Removed group role for user {userId} in group {groupId}")
+            member_role = await self._get_or_create_member_role(groupId)
+            
+            result = self.memberships_collection.update_one(
+                {
+                    'groupId': ObjectId(groupId),
+                    'userId': ObjectId(userId)
+                },
+                {
+                    '$set': {'groupRoleId': ObjectId(member_role['id'])}
+                }
+            )
+            
+            if result.modified_count > 0:
+                self.logger.info(f"Reset role to 'member' for user {userId} in group {groupId}")
                 return True
             else:
-                self.logger.warning(f"Group role not found for user {userId} in group {groupId}")
+                self.logger.warning(f"Membership not found for user {userId} in group {groupId}")
                 return False
         except Exception as e:
-            self.logger.error(f"Error removing group role: {e}")
+            self.logger.error(f"Error removing group role: {e}", exc_info=True)
             return False
     
     async def get_user_role_in_group(self, groupId: str, userId: str) -> Optional[str]:
-        """Get a user's role in a specific group from groupRoles collection."""
+        """Get a user's role in a specific group from memberships collection."""
         try:
-            group_role = self.group_roles_collection.find_one({
+            self.logger.debug(f"get_user_role_in_group called with groupId={groupId}, userId={userId}")
+            
+            membership = self.memberships_collection.find_one({
                 'groupId': ObjectId(groupId),
                 'userId': ObjectId(userId)
             })
             
-            if group_role:
-                return group_role.get('role')
+            if membership:
+                if 'groupRoleId' in membership:
+                    group_role = await self.get_group_role_config_by_id(str(membership['groupRoleId']))
+                    if group_role:
+                        role = group_role['roleName']
+                        self.logger.debug(f"Found role '{role}' for user {userId} in group {groupId}")
+                        return role
+                
+                role = 'member'
+                self.logger.debug(f"Found role '{role}' for user {userId} in group {groupId}")
+                return role
             
-            # Check if user is the group leader
             group = await self.get_group_by_id(groupId)
             if group and str(group.get('leaderUserId')) == userId:
+                self.logger.debug(f"User {userId} is the leader of group {groupId}")
                 return 'leader'
             
+            self.logger.debug(f"No role found for user {userId} in group {groupId}")
             return None
         except Exception as e:
-            self.logger.error(f"Error getting user role in group: {e}")
+            self.logger.error(f"Error getting user role in group: {e}", exc_info=True)
             return None
     
     async def remove_permission(self, permissionId: str) -> bool:
@@ -681,20 +754,297 @@ class GroupsDatabase:
             return False
     
     async def remove_role_from_group(self, groupId: str, role: str) -> int:
-        """Remove all group roles matching a specific role name from a group."""
+        """Remove all group roles matching a specific role name from a group by resetting to 'member'."""
         try:
-            result = self.group_roles_collection.delete_many({
+            self.logger.debug(f"remove_role_from_group called with groupId={groupId}, role={role}")
+            
+            role_to_remove = await self.get_group_role_config_by_name(groupId, role)
+            if not role_to_remove:
+                self.logger.warning(f"Role '{role}' not found in group {groupId}")
+                return 0
+            
+            member_role = await self._get_or_create_member_role(groupId)
+            
+            result = self.memberships_collection.update_many(
+                {
+                    'groupId': ObjectId(groupId),
+                    'groupRoleId': ObjectId(role_to_remove['id'])
+                },
+                {
+                    '$set': {'groupRoleId': ObjectId(member_role['id'])}
+                }
+            )
+            
+            if result.modified_count > 0:
+                self.logger.info(f"Reset {result.modified_count} membership role(s) from '{role}' to 'member' in group {groupId}")
+            else:
+                self.logger.warning(f"No memberships found with role '{role}' in group {groupId}")
+            
+            return result.modified_count
+        except Exception as e:
+            self.logger.error(f"Error removing role from group: {e}", exc_info=True)
+            return 0
+    
+    async def create_group_request(
+        self,
+        groupId: str,
+        userId: str,
+        requestMessage: str
+    ) -> Optional[str]:
+        """Create a new group request."""
+        try:
+            self.logger.debug(f"create_group_request called with groupId={groupId}, userId={userId}, requestMessage={requestMessage}")
+            
+            # Check if request already exists
+            existing = self.group_requests_collection.find_one({
                 'groupId': ObjectId(groupId),
-                'role': role
+                'userId': ObjectId(userId),
+                'status': 'pending'
+            })
+            
+            if existing:
+                self.logger.warning(f"Pending request already exists for user {userId} in group {groupId}")
+                return None
+            
+            request_doc = {
+                'groupId': ObjectId(groupId),
+                'userId': ObjectId(userId),
+                'requestMessage': requestMessage,
+                'status': 'pending',
+                'createdAt': datetime.utcnow()
+            }
+            result = self.group_requests_collection.insert_one(request_doc)
+            request_id = str(result.inserted_id)
+            self.logger.info(f"Group request created successfully with ID: {request_id}")
+            return request_id
+        except Exception as e:
+            self.logger.error(f"Error creating group request: {e}", exc_info=True)
+            return None
+    
+    async def get_group_requests(self, groupId: str) -> List[dict]:
+        """Get all requests for a group."""
+        try:
+            self.logger.debug(f"get_group_requests called with groupId={groupId}")
+            
+            requests = self.group_requests_collection.find({'groupId': ObjectId(groupId)}).sort('createdAt', -1)
+            request_list = []
+            users_collection = self.db.users
+            
+            for request in requests:
+                request['id'] = str(request['_id'])
+                del request['_id']
+                request['groupId'] = str(request['groupId'])
+                request['userId'] = str(request['userId'])
+                
+                # Fetch username for the user
+                try:
+                    user = users_collection.find_one({'_id': ObjectId(request['userId'])})
+                    if user:
+                        request['username'] = user.get('username', 'Unknown')
+                    else:
+                        request['username'] = 'Unknown'
+                        self.logger.warning(f"User {request['userId']} not found for group request")
+                except Exception as e:
+                    self.logger.warning(f"Error fetching username for user {request['userId']}: {e}")
+                    request['username'] = 'Unknown'
+                
+                request_list.append(request)
+            
+            self.logger.debug(f"Found {len(request_list)} group request(s) for group {groupId}")
+            return request_list
+        except Exception as e:
+            self.logger.error(f"Error fetching group requests: {e}", exc_info=True)
+            return []
+    
+    async def create_group_role_config(
+        self,
+        groupId: str,
+        roleName: str,
+        permissions: List[str]
+    ) -> Optional[str]:
+        """Create a group-specific role configuration."""
+        try:
+            self.logger.debug(f"create_group_role_config called with groupId={groupId}, roleName={roleName}")
+            
+            group_role_doc = {
+                'groupId': ObjectId(groupId),
+                'roleName': roleName,
+                'permissions': permissions,
+                'createdAt': datetime.utcnow(),
+                'updatedAt': datetime.utcnow()
+            }
+            result = self.group_roles_collection.insert_one(group_role_doc)
+            group_role_id = str(result.inserted_id)
+            self.logger.info(f"Group role config created successfully with ID: {group_role_id}")
+            return group_role_id
+        except Exception as e:
+            self.logger.error(f"Error creating group role config: {e}", exc_info=True)
+            return None
+    
+    async def get_group_role_configs(self, groupId: str) -> List[dict]:
+        """Get all role configurations for a group."""
+        try:
+            self.logger.debug(f"get_group_role_configs called with groupId={groupId}")
+            
+            group_roles = self.group_roles_collection.find({'groupId': ObjectId(groupId)})
+            role_list = []
+            for role in group_roles:
+                role['id'] = str(role['_id'])
+                del role['_id']
+                role['groupId'] = str(role['groupId'])
+                role_list.append(role)
+            
+            self.logger.debug(f"Found {len(role_list)} group role config(s)")
+            return role_list
+        except Exception as e:
+            self.logger.error(f"Error fetching group role configs: {e}", exc_info=True)
+            return []
+    
+    async def get_group_role_config_by_name(
+        self,
+        groupId: str,
+        roleName: str
+    ) -> Optional[dict]:
+        """Get a group role config by group ID and role name."""
+        try:
+            self.logger.debug(f"get_group_role_config_by_name called with groupId={groupId}, roleName={roleName}")
+            
+            role = self.group_roles_collection.find_one({
+                'groupId': ObjectId(groupId),
+                'roleName': roleName
+            })
+            if role:
+                role['id'] = str(role['_id'])
+                del role['_id']
+                role['groupId'] = str(role['groupId'])
+            return role
+        except Exception as e:
+            self.logger.error(f"Error fetching group role config by name: {e}", exc_info=True)
+            return None
+    
+    async def get_group_role_config_by_id(self, groupRoleId: str) -> Optional[dict]:
+        """Get a group role config by ID."""
+        try:
+            self.logger.debug(f"get_group_role_config_by_id called with groupRoleId={groupRoleId}")
+            
+            role = self.group_roles_collection.find_one({'_id': ObjectId(groupRoleId)})
+            if role:
+                role['id'] = str(role['_id'])
+                del role['_id']
+                role['groupId'] = str(role['groupId'])
+            return role
+        except Exception as e:
+            self.logger.error(f"Error fetching group role config by ID: {e}", exc_info=True)
+            return None
+    
+    async def update_group_role_config(
+        self,
+        groupId: str,
+        roleName: str,
+        permissions: List[str]
+    ) -> bool:
+        """Update a group role configuration."""
+        try:
+            self.logger.debug(f"update_group_role_config called with groupId={groupId}, roleName={roleName}")
+            
+            result = self.group_roles_collection.update_one(
+                {
+                    'groupId': ObjectId(groupId),
+                    'roleName': roleName
+                },
+                {
+                    '$set': {
+                        'permissions': permissions,
+                        'updatedAt': datetime.utcnow()
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                self.logger.info(f"Updated group role config for {roleName} in group {groupId}")
+                return True
+            else:
+                self.logger.warning(f"Group role config not found or no changes")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error updating group role config: {e}", exc_info=True)
+            return False
+    
+    async def delete_group_role_config(self, groupId: str, roleName: str) -> bool:
+        """Delete a group role configuration."""
+        try:
+            self.logger.debug(f"delete_group_role_config called with groupId={groupId}, roleName={roleName}")
+            
+            result = self.group_roles_collection.delete_one({
+                'groupId': ObjectId(groupId),
+                'roleName': roleName
             })
             
             if result.deleted_count > 0:
-                self.logger.info(f"Removed {result.deleted_count} group role(s) with role '{role}' from group {groupId}")
+                self.logger.info(f"Deleted group role config for {roleName} in group {groupId}")
+                return True
             else:
-                self.logger.warning(f"No group roles found with role '{role}' in group {groupId}")
-            
-            return result.deleted_count
+                self.logger.warning(f"Group role config not found")
+                return False
         except Exception as e:
-            self.logger.error(f"Error removing role from group: {e}")
-            return 0
+            self.logger.error(f"Error deleting group role config: {e}", exc_info=True)
+            return False
+    
+    async def _get_or_create_member_role(self, groupId: str) -> dict:
+        """Get or create default 'member' role for a group."""
+        try:
+            existing_role = await self.get_group_role_config_by_name(groupId, 'member')
+            if existing_role:
+                return existing_role
+            
+            role_id = await self.create_group_role_config(
+                groupId=groupId,
+                roleName='member',
+                permissions=[]
+            )
+            
+            if role_id:
+                return {'id': role_id, 'roleName': 'member', 'permissions': []}
+            else:
+                raise Exception("Failed to create default member role")
+        except Exception as e:
+            self.logger.error(f"Error getting or creating member role: {e}", exc_info=True)
+            raise
+    
+    async def get_membership_with_role(self, groupId: str, userId: str) -> Optional[dict]:
+        """Get membership info with role details."""
+        try:
+            self.logger.debug(f"get_membership_with_role called with groupId={groupId}, userId={userId}")
+            
+            membership = self.memberships_collection.find_one({
+                'groupId': ObjectId(groupId),
+                'userId': ObjectId(userId)
+            })
+            
+            if not membership:
+                return None
+            
+            membership['id'] = str(membership['_id'])
+            del membership['_id']
+            membership['groupId'] = str(membership['groupId'])
+            membership['userId'] = str(membership['userId'])
+            
+            if 'groupRoleId' in membership:
+                group_role_id = str(membership['groupRoleId'])
+                membership['groupRoleId'] = group_role_id
+                group_role = await self.get_group_role_config_by_id(group_role_id)
+                if group_role:
+                    membership['role'] = group_role['roleName']
+                    membership['permissions'] = group_role['permissions']
+                else:
+                    membership['role'] = 'member'
+                    membership['permissions'] = []
+            else:
+                membership['role'] = 'member'
+                membership['permissions'] = []
+            
+            return membership
+        except Exception as e:
+            self.logger.error(f"Error getting membership with role: {e}", exc_info=True)
+            return None
 

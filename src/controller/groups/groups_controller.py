@@ -13,7 +13,14 @@ from src.models.groups import (
     CreateWorksheetResponse,
     GetWorksheetsResponse,
     JoinGroupResponse,
-    LeaveGroupResponse
+    LeaveGroupResponse,
+    CreateGroupRequestResponse,
+    GetGroupRequestsResponse,
+    GroupRoleConfig,
+    CreateGroupRoleConfigResponse,
+    GetGroupRoleConfigsResponse,
+    UpdateGroupRoleConfigResponse,
+    DeleteGroupRoleConfigResponse
 )
 from src.utils.logger import get_logger
 from src.services.groups_service import GroupsService
@@ -317,4 +324,197 @@ class GroupsController:
             return LeaveGroupResponse(
                 success=False,
                 message=f"Error leaving group: {str(e)}"
+            )
+    
+    async def create_group_request(
+        self,
+        groupId: str,
+        userId: str,
+        requestMessage: str
+    ) -> CreateGroupRequestResponse:
+        """Create a new group request."""
+        try:
+            self.logger.debug(f"create_group_request controller called with groupId={groupId}, userId={userId}")
+            
+            success, message, request_id = await self.groups_service.create_group_request(
+                groupId=groupId,
+                userId=userId,
+                requestMessage=requestMessage
+            )
+            
+            self.logger.info(f"Group request creation completed: success={success}")
+            return CreateGroupRequestResponse(
+                success=success,
+                message=message,
+                requestId=request_id
+            )
+        except Exception as e:
+            self.logger.error(f"Error in create_group_request controller: {e}", exc_info=True)
+            return CreateGroupRequestResponse(
+                success=False,
+                message=f"Error creating group request: {str(e)}",
+                requestId=None
+            )
+    
+    async def get_group_requests(self, groupId: str) -> GetGroupRequestsResponse:
+        """Get all requests for a group."""
+        try:
+            self.logger.debug(f"get_group_requests controller called with groupId={groupId}")
+            
+            success, message, requests_data = await self.groups_service.get_group_requests(groupId=groupId)
+            
+            # Convert dict to GroupRequest models
+            from src.models.groups import GroupRequest
+            from datetime import datetime
+            
+            requests = []
+            for req in requests_data:
+                # Handle createdAt - it might be datetime or string
+                created_at = req['createdAt']
+                if isinstance(created_at, str):
+                    try:
+                        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00').split('.')[0])
+                    except:
+                        created_at = datetime.utcnow()
+                elif not isinstance(created_at, datetime):
+                    created_at = datetime.utcnow()
+                
+                requests.append(
+                    GroupRequest(
+                        id=req['id'],
+                        groupId=req['groupId'],
+                        userId=req['userId'],
+                        requestMessage=req['requestMessage'],
+                        createdAt=created_at,
+                        status=req.get('status', 'pending')
+                    )
+                )
+            
+            self.logger.info(f"Group requests retrieval completed: success={success}, count={len(requests)}")
+            return GetGroupRequestsResponse(
+                success=success,
+                message=message,
+                requests=requests
+            )
+        except Exception as e:
+            self.logger.error(f"Error in get_group_requests controller: {e}", exc_info=True)
+            return GetGroupRequestsResponse(
+                success=False,
+                message=f"Error getting group requests: {str(e)}",
+                requests=[]
+            )
+    
+    async def create_group_role_config(
+        self,
+        groupId: str,
+        roleName: str,
+        permissions: list
+    ) -> CreateGroupRoleConfigResponse:
+        """Create a group-specific role configuration."""
+        try:
+            self.logger.debug(f"create_group_role_config controller called with groupId={groupId}, roleName={roleName}")
+            
+            success, message, group_role_id = await self.groups_service.create_group_role_config(
+                groupId=groupId,
+                roleName=roleName,
+                permissions=permissions
+            )
+            
+            self.logger.info(f"Group role config creation completed: success={success}")
+            return CreateGroupRoleConfigResponse(
+                success=success,
+                message=message,
+                groupRoleId=group_role_id
+            )
+        except Exception as e:
+            self.logger.error(f"Error in create_group_role_config controller: {e}", exc_info=True)
+            return CreateGroupRoleConfigResponse(
+                success=False,
+                message=f"Error creating group role config: {str(e)}",
+                groupRoleId=None
+            )
+    
+    async def get_group_role_configs(self, groupId: str) -> GetGroupRoleConfigsResponse:
+        """Get all role configurations for a group."""
+        try:
+            self.logger.debug(f"get_group_role_configs controller called with groupId={groupId}")
+            
+            success, message, configs_data = await self.groups_service.get_group_role_configs(groupId=groupId)
+            
+            configs = [
+                GroupRoleConfig(
+                    id=config['id'],
+                    groupId=config['groupId'],
+                    roleName=config['roleName'],
+                    permissions=config['permissions']
+                )
+                for config in configs_data
+            ]
+            
+            self.logger.info(f"Group role configs retrieval completed: success={success}, count={len(configs)}")
+            return GetGroupRoleConfigsResponse(
+                success=success,
+                message=message,
+                groupRoles=configs
+            )
+        except Exception as e:
+            self.logger.error(f"Error in get_group_role_configs controller: {e}", exc_info=True)
+            return GetGroupRoleConfigsResponse(
+                success=False,
+                message=f"Error getting group role configs: {str(e)}",
+                groupRoles=[]
+            )
+    
+    async def update_group_role_config(
+        self,
+        groupId: str,
+        roleName: str,
+        permissions: list
+    ) -> UpdateGroupRoleConfigResponse:
+        """Update a group role configuration."""
+        try:
+            self.logger.debug(f"update_group_role_config controller called with groupId={groupId}, roleName={roleName}")
+            
+            success, message = await self.groups_service.update_group_role_config(
+                groupId=groupId,
+                roleName=roleName,
+                permissions=permissions
+            )
+            
+            self.logger.info(f"Group role config update completed: success={success}")
+            return UpdateGroupRoleConfigResponse(
+                success=success,
+                message=message
+            )
+        except Exception as e:
+            self.logger.error(f"Error in update_group_role_config controller: {e}", exc_info=True)
+            return UpdateGroupRoleConfigResponse(
+                success=False,
+                message=f"Error updating group role config: {str(e)}"
+            )
+    
+    async def delete_group_role_config(
+        self,
+        groupId: str,
+        roleName: str
+    ) -> DeleteGroupRoleConfigResponse:
+        """Delete a group role configuration."""
+        try:
+            self.logger.debug(f"delete_group_role_config controller called with groupId={groupId}, roleName={roleName}")
+            
+            success, message = await self.groups_service.delete_group_role_config(
+                groupId=groupId,
+                roleName=roleName
+            )
+            
+            self.logger.info(f"Group role config deletion completed: success={success}")
+            return DeleteGroupRoleConfigResponse(
+                success=success,
+                message=message
+            )
+        except Exception as e:
+            self.logger.error(f"Error in delete_group_role_config controller: {e}", exc_info=True)
+            return DeleteGroupRoleConfigResponse(
+                success=False,
+                message=f"Error deleting group role config: {str(e)}"
             )

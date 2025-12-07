@@ -12,6 +12,8 @@ from src.models.groups import (
 )
 from src.utils.logger import get_logger
 from src.database.groups.groups_database import GroupsDatabase
+from src.database.users.users_database import UsersDatabase
+from src.services.notification_service import NotificationService
 
 class GroupsService:
     """Service for handling group business logic."""
@@ -20,6 +22,8 @@ class GroupsService:
         """Initialize the service and database."""
         self.logger = get_logger(__name__)
         self.groups_database = GroupsDatabase()
+        self.users_database = UsersDatabase()
+        self.notification_service = NotificationService()
         self.logger.info("GroupsService initialized successfully")
     
     def _parse_datetime(self, dt_value) -> datetime:
@@ -89,7 +93,7 @@ class GroupsService:
             self.logger.error(f"Error initializing group: {e}")
             return False, f"Error initializing group: {str(e)}"
     
-    def _convert_membership_to_member(self, membership: dict, user: dict) -> GroupMember:
+    def _get_member_data(self, membership: dict, user: dict) -> GroupMember:
         """Convert membership and user data to GroupMember model."""
         return GroupMember(
             userId=str(user['id']),
@@ -113,7 +117,7 @@ class GroupsService:
             for membership in memberships:
                 user = await self.groups_database.get_user_by_id(membership['userId'])
                 if user:
-                    members.append(self._convert_membership_to_member(membership, user))
+                    members.append(self._get_member_data(membership, user))
             
             member_count = len(members)
             return True, "Users retrieved successfully", members, member_count
@@ -270,6 +274,7 @@ class GroupsService:
             
             if chat_id:
                 self.logger.info(f"Group chat created successfully: {chat_id}")
+                await self._send_chat_notifications(groupId, userId, message, group)
                 return True, "Group chat created successfully", chat_id
             else:
                 return False, "Failed to create group chat", None
@@ -277,6 +282,62 @@ class GroupsService:
         except Exception as e:
             self.logger.error(f"Error creating group chat: {e}")
             return False, f"Error creating group chat: {str(e)}", None
+    
+    async def _send_chat_notifications(
+        self,
+        groupId: str,
+        senderUserId: str,
+        message: str,
+        group: dict
+    ):
+        """Send push notifications to group members when a new chat message is posted."""
+        try:
+            self.logger.debug(f"Sending chat notifications for group: {groupId}")
+            
+            # Get all group members
+            members = await self.groups_database.get_group_members(groupId)
+            if not members:
+                self.logger.debug("No members found for group")
+                return
+            
+            # Get recipient user IDs (excluding sender)
+            recipient_ids = [
+                member['userId'] 
+                for member in members 
+                if member.get('userId') != senderUserId
+            ]
+            
+            if not recipient_ids:
+                self.logger.debug("No recipients for notification")
+                return
+            
+            # Get FCM tokens for recipients
+            fcm_tokens = await self.users_database.get_fcm_tokens_for_users(recipient_ids)
+            
+            if not fcm_tokens:
+                self.logger.debug("No FCM tokens found for recipients")
+                return
+            
+            # Get sender username
+            sender = await self.users_database.get_user_by_id(senderUserId)
+            sender_username = sender.get('username', 'Someone') if sender else 'Someone'
+            
+            # Get group name
+            group_name = group.get('name', 'Group') if group else 'Group'
+            
+            # Send notifications
+            await self.notification_service.send_group_chat_notification(
+                group_id=groupId,
+                group_name=group_name,
+                sender_username=sender_username,
+                message=message,
+                recipient_user_ids=recipient_ids,
+                fcm_tokens=fcm_tokens
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error sending chat notifications: {e}", exc_info=True)
+            # Don't fail the chat creation if notification fails
     
     async def create_worksheet(
         self,
@@ -384,4 +445,142 @@ class GroupsService:
         except Exception as e:
             self.logger.error(f"Error leaving group: {e}")
             return False, f"Error leaving group: {str(e)}"
+    
+    async def create_group_request(
+        self,
+        groupId: str,
+        userId: str,
+        requestMessage: str
+    ) -> tuple[bool, str, Optional[str]]:
+        """Create a new group request."""
+        try:
+            self.logger.debug(f"create_group_request called with groupId={groupId}, userId={userId}, requestMessage={requestMessage}")
+            
+            # Check if group exists
+            group = await self.groups_database.get_group_by_id(groupId)
+            if not group:
+                self.logger.warning(f"Group {groupId} not found")
+                return False, "Group not found", None
+            
+            # Check if user is already a member
+            members = await self.groups_database.get_group_members(groupId)
+            if any(str(member['userId']) == userId for member in members):
+                self.logger.warning(f"User {userId} is already a member of group {groupId}")
+                return False, "User is already a member of this group", None
+            
+            request_id = await self.groups_database.create_group_request(groupId, userId, requestMessage)
+            
+            if request_id:
+                self.logger.info(f"Group request created successfully: {request_id}")
+                return True, "Group request created successfully", request_id
+            else:
+                self.logger.warning(f"Failed to create group request (may already have pending request)")
+                return False, "Failed to create group request (may already have pending request)", None
+                
+        except Exception as e:
+            self.logger.error(f"Error creating group request: {e}", exc_info=True)
+            return False, f"Error creating group request: {str(e)}", None
+    
+    async def get_group_requests(self, groupId: str) -> tuple[bool, str, List[dict]]:
+        """Get all requests for a group."""
+        try:
+            self.logger.debug(f"get_group_requests called with groupId={groupId}")
+            
+            # Check if group exists
+            group = await self.groups_database.get_group_by_id(groupId)
+            if not group:
+                self.logger.warning(f"Group {groupId} not found")
+                return False, "Group not found", []
+            
+            requests = await self.groups_database.get_group_requests(groupId)
+            
+            self.logger.info(f"Retrieved {len(requests)} group request(s) for group {groupId}")
+            return True, "Group requests retrieved successfully", requests
+                
+        except Exception as e:
+            self.logger.error(f"Error getting group requests: {e}", exc_info=True)
+            return False, f"Error getting group requests: {str(e)}", []
+    
+    async def create_group_role_config(
+        self,
+        groupId: str,
+        roleName: str,
+        permissions: List[str]
+    ) -> tuple[bool, str, Optional[str]]:
+        """Create a group-specific role configuration."""
+        try:
+            self.logger.debug(f"create_group_role_config called with groupId={groupId}, roleName={roleName}")
+            
+            group_role_id = await self.groups_database.create_group_role_config(
+                groupId, roleName, permissions
+            )
+            
+            if group_role_id:
+                self.logger.info(f"Group role config created successfully: {group_role_id}")
+                return True, "Group role config created successfully", group_role_id
+            else:
+                return False, "Failed to create group role config", None
+                
+        except Exception as e:
+            self.logger.error(f"Error creating group role config: {e}", exc_info=True)
+            return False, f"Error creating group role config: {str(e)}", None
+    
+    async def get_group_role_configs(self, groupId: str) -> tuple[bool, str, List[dict]]:
+        """Get all role configurations for a group."""
+        try:
+            self.logger.debug(f"get_group_role_configs called with groupId={groupId}")
+            
+            group_roles = await self.groups_database.get_group_role_configs(groupId)
+            
+            self.logger.info(f"Retrieved {len(group_roles)} group role config(s)")
+            return True, "Group role configs retrieved successfully", group_roles
+                
+        except Exception as e:
+            self.logger.error(f"Error getting group role configs: {e}", exc_info=True)
+            return False, f"Error getting group role configs: {str(e)}", []
+    
+    async def update_group_role_config(
+        self,
+        groupId: str,
+        roleName: str,
+        permissions: List[str]
+    ) -> tuple[bool, str]:
+        """Update a group role configuration."""
+        try:
+            self.logger.debug(f"update_group_role_config called with groupId={groupId}, roleName={roleName}")
+            
+            success = await self.groups_database.update_group_role_config(
+                groupId, roleName, permissions
+            )
+            
+            if success:
+                self.logger.info(f"Group role config updated successfully")
+                return True, "Group role config updated successfully"
+            else:
+                return False, "Failed to update group role config"
+                
+        except Exception as e:
+            self.logger.error(f"Error updating group role config: {e}", exc_info=True)
+            return False, f"Error updating group role config: {str(e)}"
+    
+    async def delete_group_role_config(
+        self,
+        groupId: str,
+        roleName: str
+    ) -> tuple[bool, str]:
+        """Delete a group role configuration."""
+        try:
+            self.logger.debug(f"delete_group_role_config called with groupId={groupId}, roleName={roleName}")
+            
+            success = await self.groups_database.delete_group_role_config(groupId, roleName)
+            
+            if success:
+                self.logger.info(f"Group role config deleted successfully")
+                return True, "Group role config deleted successfully"
+            else:
+                return False, "Failed to delete group role config"
+                
+        except Exception as e:
+            self.logger.error(f"Error deleting group role config: {e}", exc_info=True)
+            return False, f"Error deleting group role config: {str(e)}"
 

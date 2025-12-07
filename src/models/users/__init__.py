@@ -10,6 +10,10 @@ from .users_model import (
     login_user_response,
     get_user_request,
     get_user_response,
+    register_fcm_token_request,
+    register_fcm_token_response,
+    unregister_fcm_token_request,
+    unregister_fcm_token_response,
 )
 
 __all__ = [
@@ -20,4 +24,8 @@ __all__ = [
     "login_user_response",
     "get_user_request",
     "get_user_response",
+    "register_fcm_token_request",
+    "register_fcm_token_response",
+    "unregister_fcm_token_request",
+    "unregister_fcm_token_response",
 ]

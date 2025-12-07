@@ -134,3 +134,93 @@ class UsersDatabase:
         except Exception as e:
             self.logger.error(f"Error fetching user by username: {e}")
             return None
+    
+    async def register_fcm_token(self, user_id: str, fcm_token: str) -> bool:
+        """
+        Register or update FCM token for a user.
+        
+        Args:
+            user_id: User's ID
+            fcm_token: FCM token string
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.logger.debug(f"Registering FCM token for user: {user_id}")
+            result = self.collection.update_one(
+                {'_id': ObjectId(user_id)},
+                {
+                    '$set': {
+                        'fcmToken': fcm_token,
+                        'fcmTokenUpdated': datetime.utcnow(),
+                        'updated_date': datetime.utcnow()
+                    }
+                },
+                upsert=False
+            )
+            if result.modified_count > 0 or result.matched_count > 0:
+                self.logger.info(f"FCM token registered successfully for user: {user_id}")
+                return True
+            else:
+                self.logger.warning(f"User not found for FCM token registration: {user_id}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error registering FCM token: {e}")
+            return False
+    
+    async def unregister_fcm_token(self, user_id: str) -> bool:
+        """
+        Unregister FCM token for a user.
+        
+        Args:
+            user_id: User's ID
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.logger.debug(f"Unregistering FCM token for user: {user_id}")
+            result = self.collection.update_one(
+                {'_id': ObjectId(user_id)},
+                {
+                    '$unset': {'fcmToken': '', 'fcmTokenUpdated': ''},
+                    '$set': {'updated_date': datetime.utcnow()}
+                }
+            )
+            if result.modified_count > 0 or result.matched_count > 0:
+                self.logger.info(f"FCM token unregistered successfully for user: {user_id}")
+                return True
+            else:
+                self.logger.warning(f"User not found for FCM token unregistration: {user_id}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error unregistering FCM token: {e}")
+            return False
+    
+    async def get_fcm_tokens_for_users(self, user_ids: list[str]) -> dict[str, str]:
+        """
+        Get FCM tokens for a list of user IDs.
+        
+        Args:
+            user_ids: List of user IDs
+            
+        Returns:
+            Dictionary mapping user_id to fcm_token
+        """
+        try:
+            self.logger.debug(f"Fetching FCM tokens for {len(user_ids)} users")
+            object_ids = [ObjectId(uid) for uid in user_ids]
+            users = self.collection.find(
+                {'_id': {'$in': object_ids}, 'fcmToken': {'$exists': True, '$ne': None}}
+            )
+            tokens = {}
+            for user in users:
+                user_id_str = str(user['_id'])
+                if 'fcmToken' in user and user['fcmToken']:
+                    tokens[user_id_str] = user['fcmToken']
+            self.logger.debug(f"Found {len(tokens)} FCM tokens")
+            return tokens
+        except Exception as e:
+            self.logger.error(f"Error fetching FCM tokens: {e}")
+            return {}

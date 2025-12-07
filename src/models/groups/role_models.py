@@ -159,3 +159,53 @@ class RemoveRoleFromGroupResponse(BaseModel):
     message: str
     removedCount: int = 0
 
+class GroupRoleConfig(BaseModel):
+    """Model for a group-specific role configuration."""
+    id: str
+    groupId: str
+    roleName: str
+    permissions: List[str]
+
+class CreateGroupRoleConfigRequest(BaseModel):
+    """Model for creating a group role configuration."""
+    groupId: str
+    roleName: str
+    permissions: List[str]
+
+class CreateGroupRoleConfigResponse(BaseModel):
+    """Model for create group role config response."""
+    success: bool
+    message: str
+    groupRoleId: Optional[str] = None
+
+class GetGroupRoleConfigsRequest(BaseModel):
+    """Model for getting group role configurations."""
+    groupId: str
+
+class GetGroupRoleConfigsResponse(BaseModel):
+    """Model for get group role configs response."""
+    success: bool
+    message: str
+    groupRoles: List[GroupRoleConfig] = []
+
+class UpdateGroupRoleConfigRequest(BaseModel):
+    """Model for updating a group role configuration."""
+    groupId: str
+    roleName: str
+    permissions: List[str]
+
+class UpdateGroupRoleConfigResponse(BaseModel):
+    """Model for update group role config response."""
+    success: bool
+    message: str
+
+class DeleteGroupRoleConfigRequest(BaseModel):
+    """Model for deleting a group role configuration."""
+    groupId: str
+    roleName: str
+
+class DeleteGroupRoleConfigResponse(BaseModel):
+    """Model for delete group role config response."""
+    success: bool
+    message: str
+

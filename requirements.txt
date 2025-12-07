@@ -31,3 +31,6 @@ PyJWT>=2.8.0
 
 # MongoDB driver
 pymongo>=4.6.0
+
+# Firebase Admin SDK for push notifications
+firebase-admin>=6.4.0

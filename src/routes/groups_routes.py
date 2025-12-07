@@ -24,7 +24,18 @@ from src.models.groups import (
     JoinGroupRequest,
     JoinGroupResponse,
     LeaveGroupRequest,
-    LeaveGroupResponse
+    LeaveGroupResponse,
+    CreateGroupRequestRequest,
+    CreateGroupRequestResponse,
+    GetGroupRequestsResponse,
+    CreateGroupRoleConfigRequest,
+    CreateGroupRoleConfigResponse,
+    GetGroupRoleConfigsRequest,
+    GetGroupRoleConfigsResponse,
+    UpdateGroupRoleConfigRequest,
+    UpdateGroupRoleConfigResponse,
+    DeleteGroupRoleConfigRequest,
+    DeleteGroupRoleConfigResponse
 )
 from src.controller.groups import GroupsController
 
@@ -115,7 +126,7 @@ async def initialize_group(request: InitializeGroupRequest):
 
 
 @router.get("/get_users", response_model=GetUsersResponse)
-async def get_users(request: GetUsersRequest):
+async def get_users(request: GetUsersRequest = Depends()):
     """
     Get all users (members) of a group.
     
@@ -266,4 +277,116 @@ async def leave_group(request: LeaveGroupRequest):
     return await controller.leave_group(
         groupId=request.groupId,
         userId=request.userId
+    )
+
+
+@router.post("/create_group_request", response_model=CreateGroupRequestResponse)
+async def create_group_request(request: CreateGroupRequestRequest):
+    """
+    Create a new group request.
+    
+    Request Body:
+        groupId: ID of the group
+        userId: ID of the user making the request
+        requestMessage: Message from the user requesting to join
+    
+    Returns:
+        CreateGroupRequestResponse with creation status and request ID
+    """
+    controller = GroupsController()
+    return await controller.create_group_request(
+        groupId=request.groupId,
+        userId=request.userId,
+        requestMessage=request.requestMessage
+    )
+
+
+@router.get("/get_group_requests", response_model=GetGroupRequestsResponse)
+async def get_group_requests(groupId: str = Query(..., description="Group ID")):
+    """
+    Get all requests for a group.
+    
+    Query Parameters:
+        groupId: ID of the group
+    
+    Returns:
+        GetGroupRequestsResponse with list of group requests
+    """
+    controller = GroupsController()
+    return await controller.get_group_requests(groupId=groupId)
+
+
+@router.post("/create_group_role_config", response_model=CreateGroupRoleConfigResponse)
+async def create_group_role_config(request: CreateGroupRoleConfigRequest):
+    """
+    Create a group-specific role configuration.
+    
+    Request Body:
+        groupId: ID of the group
+        roleName: Name of the role (e.g., "admin", "moderator")
+        permissions: List of permission action strings
+    
+    Returns:
+        CreateGroupRoleConfigResponse with creation status and group role ID
+    """
+    controller = GroupsController()
+    return await controller.create_group_role_config(
+        groupId=request.groupId,
+        roleName=request.roleName,
+        permissions=request.permissions
+    )
+
+
+@router.get("/get_group_role_configs", response_model=GetGroupRoleConfigsResponse)
+async def get_group_role_configs(groupId: str = Query(..., description="Group ID")):
+    """
+    Get all role configurations for a group.
+    
+    Query Parameters:
+        groupId: ID of the group
+    
+    Returns:
+        GetGroupRoleConfigsResponse with list of group role configurations
+    """
+    controller = GroupsController()
+    return await controller.get_group_role_configs(groupId=groupId)
+
+
+@router.post("/update_group_role_config", response_model=UpdateGroupRoleConfigResponse)
+async def update_group_role_config(request: UpdateGroupRoleConfigRequest):
+    """
+    Update a group role configuration.
+    
+    Request Body:
+        groupId: ID of the group
+        roleName: Name of the role to update
+        permissions: New list of permission action strings
+    
+    Returns:
+        UpdateGroupRoleConfigResponse with update status
+    """
+    controller = GroupsController()
+    return await controller.update_group_role_config(
+        groupId=request.groupId,
+        roleName=request.roleName,
+        permissions=request.permissions
+    )
+
+
+@router.post("/delete_group_role_config", response_model=DeleteGroupRoleConfigResponse)
+async def delete_group_role_config(request: DeleteGroupRoleConfigRequest):
+    """
+    Delete a group role configuration.
+    
+    Request Body:
+        groupId: ID of the group
+        roleName: Name of the role to delete
+    
+    Returns:
+        DeleteGroupRoleConfigResponse with deletion status
+    """
+    controller = GroupsController()
+    return await controller.delete_group_role_config(
+        groupId=request.groupId,
+        roleName=request.roleName
     )

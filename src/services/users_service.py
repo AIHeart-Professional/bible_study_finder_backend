@@ -200,3 +200,48 @@ class UsersService:
         except Exception as e:
             self.logger.error(f"Error getting user: {e}")
             return False, f"Error getting user: {str(e)}", None
+    
+    async def register_fcm_token(self, user_id: str, fcm_token: str) -> tuple[bool, str]:
+        """
+        Register FCM token for a user.
+        
+        Args:
+            user_id: User's ID
+            fcm_token: FCM token string
+            
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        try:
+            self.logger.debug(f"Registering FCM token for user: {user_id}")
+            success = await self.users_database.register_fcm_token(user_id, fcm_token)
+            if success:
+                self.logger.info(f"FCM token registered successfully for user: {user_id}")
+                return True, "FCM token registered successfully"
+            else:
+                return False, "Failed to register FCM token"
+        except Exception as e:
+            self.logger.error(f"Error registering FCM token: {e}")
+            return False, f"Error registering FCM token: {str(e)}"
+    
+    async def unregister_fcm_token(self, user_id: str) -> tuple[bool, str]:
+        """
+        Unregister FCM token for a user.
+        
+        Args:
+            user_id: User's ID
+            
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        try:
+            self.logger.debug(f"Unregistering FCM token for user: {user_id}")
+            success = await self.users_database.unregister_fcm_token(user_id)
+            if success:
+                self.logger.info(f"FCM token unregistered successfully for user: {user_id}")
+                return True, "FCM token unregistered successfully"
+            else:
+                return False, "Failed to unregister FCM token"
+        except Exception as e:
+            self.logger.error(f"Error unregistering FCM token: {e}")
+            return False, f"Error unregistering FCM token: {str(e)}"

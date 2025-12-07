@@ -9,6 +9,7 @@ from .groups_model import (
     GroupMember,
     ChatMessage,
     Group,
+    GroupRequest,
     CreateGroupRequest,
     InitializeGroupRequest,
     GetUsersRequest,
@@ -31,6 +32,9 @@ from .groups_model import (
     JoinGroupResponse,
     LeaveGroupRequest,
     LeaveGroupResponse,
+    CreateGroupRequestRequest,
+    CreateGroupRequestResponse,
+    GetGroupRequestsResponse,
     GetUsersResponse,
     GetChatResponse,
     GetMealsResponse,
@@ -45,6 +49,17 @@ from .groups_model import (
     GetWorksheetsRequest,
     GetWorksheetsResponse,
 )
+from .role_models import (
+    GroupRoleConfig,
+    CreateGroupRoleConfigRequest,
+    CreateGroupRoleConfigResponse,
+    GetGroupRoleConfigsRequest,
+    GetGroupRoleConfigsResponse,
+    UpdateGroupRoleConfigRequest,
+    UpdateGroupRoleConfigResponse,
+    DeleteGroupRoleConfigRequest,
+    DeleteGroupRoleConfigResponse,
+)
 
 __all__ = [
     "Location",
@@ -53,6 +68,7 @@ __all__ = [
     "GroupMember",
     "ChatMessage",
     "Group",
+    "GroupRequest",
     "CreateGroupRequest",
     "InitializeGroupRequest",
     "GetUsersRequest",
@@ -71,6 +87,9 @@ __all__ = [
     "JoinGroupResponse",
     "LeaveGroupRequest",
     "LeaveGroupResponse",
+    "CreateGroupRequestRequest",
+    "CreateGroupRequestResponse",
+    "GetGroupRequestsResponse",
     "GetMealsRequest",
     "GetStudyPlanRequest",
     "CreateGroupResponse",
@@ -88,5 +107,14 @@ __all__ = [
     "CreateWorksheetResponse",
     "GetWorksheetsRequest",
     "GetWorksheetsResponse",
+    "GroupRoleConfig",
+    "CreateGroupRoleConfigRequest",
+    "CreateGroupRoleConfigResponse",
+    "GetGroupRoleConfigsRequest",
+    "GetGroupRoleConfigsResponse",
+    "UpdateGroupRoleConfigRequest",
+    "UpdateGroupRoleConfigResponse",
+    "DeleteGroupRoleConfigRequest",
+    "DeleteGroupRoleConfigResponse",
 ]
 

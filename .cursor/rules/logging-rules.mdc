@@ -1,0 +1,427 @@
+---
+alwaysApply: true
+---
+
+# Logging Rules for Bible Study Finder Backend
+
+## Overview
+All logging in the backend MUST use the custom logger from `/src/utils/logger.py`. This ensures consistent, structured, and colored logging across the entire application.
+
+## Core Principles
+
+### 1. Logger Instantiation
+- **ALWAYS** instantiate the logger in the `__init__` method of classes that need logging
+- **ALWAYS** use `get_logger(__name__)` to get a logger instance
+- **ALWAYS** store the logger as `self.logger` in class instances
+- **ALWAYS** log successful initialization with `info` level
+
+**Example:**
+```python
+from src.utils.logger import get_logger
+
+class MyService:
+    def __init__(self):
+        """Initialize the service and database."""
+        self.logger = get_logger(__name__)
+        self.database = MyDatabase()
+        self.logger.info("MyService initialized successfully")
+```
+
+### 2. Log Levels and Usage
+
+#### DEBUG Level
+- **ALWAYS** use at the **start** of functions/methods to log:
+  - Function name
+  - Input parameters and their values (when safe to log)
+  - Entry point information
+- **ALWAYS** use at the **end** of functions/methods to log:
+  - Function completion
+  - Return values (when safe to log, excluding sensitive data)
+- **ALWAYS** use in areas where errors could occur (before risky operations)
+- **ALWAYS** include parameter values when logging function entries
+
+**Example:**
+```python
+async def create_user(self, first_name: str, email: str, password: str) -> tuple[bool, str]:
+    """Create a new user."""
+    self.logger.debug(f"create_user called with first_name={first_name}, email={email}")
+    
+    try:
+        # Risky operation - log before
+        self.logger.debug("Checking if user already exists")
+        existing_user = await self.database.get_user_by_email(email)
+        
+        if existing_user:
+            self.logger.warning(f"User with email {email} already exists")
+            return False, "User already exists"
+        
+        # Create user
+        user_id = await self.database.create_user(first_name, email, password)
+        
+        self.logger.debug(f"create_user completed successfully, user_id={user_id}")
+        return True, "User created successfully"
+        
+    except Exception as e:
+        self.logger.error(f"Error in create_user: {e}", exc_info=True)
+        return False, f"Error creating user: {str(e)}"
+```
+
+#### INFO Level
+- **ALWAYS** use for general information and successful operations:
+  - Successful initialization messages
+  - Successful completion of business operations
+  - Important state changes
+  - General flow information (e.g., "Processing request", "Finishing function call")
+- **ALWAYS** use when logging successful database operations
+- **ALWAYS** use for successful API calls (via `log_api_call` helper)
+
+**Example:**
+```python
+self.logger.info("UserService initialized successfully")
+self.logger.info(f"User created successfully: {user_id}")
+self.logger.info("Finishing create_user function call")
+```
+
+#### WARNING Level
+- **ALWAYS** use for unexpected results that are NOT errors:
+  - Validation failures
+  - Not found scenarios (when expected)
+  - Business logic warnings
+  - Deprecated feature usage
+  - Retry attempts
+  - Non-critical failures
+
+**Example:**
+```python
+if not user_data:
+    self.logger.warning(f"User not found with email: {email}")
+    return False, "User not found", None
+
+if result.modified_count == 0:
+    self.logger.warning(f"Permission {permissionId} not found or no changes made")
+    return False, "Permission not found or no changes made"
+```
+
+#### ERROR Level
+- **ALWAYS** use in `except` blocks to log exceptions
+- **ALWAYS** include the exception message
+- **ALWAYS** use `exc_info=True` for full stack traces in error logs
+- **ALWAYS** log errors before returning error responses
+
+**Example:**
+```python
+try:
+    result = await self.database.create_user(...)
+except Exception as e:
+    self.logger.error(f"Error creating user: {e}", exc_info=True)
+    return False, f"Error creating user: {str(e)}"
+```
+
+#### CRITICAL Level
+- **ONLY** use for system-critical failures:
+  - Database connection failures
+  - Application startup failures
+  - Security breaches
+  - Data corruption issues
+
+**Example:**
+```python
+if not self.client:
+    self.logger.critical("Database connection failed - application cannot continue")
+    raise SystemError("Database connection failed")
+```
+
+### 3. Function Logging Pattern
+
+**ALWAYS** follow this pattern for all functions:
+
+```python
+async def my_function(self, param1: str, param2: int) -> tuple[bool, str]:
+    """Function description."""
+    # 1. DEBUG: Log function entry with parameters
+    self.logger.debug(f"my_function called with param1={param1}, param2={param2}")
+    
+    try:
+        # 2. DEBUG: Log before risky operations
+        self.logger.debug("Performing risky operation X")
+        
+        # 3. Perform operation
+        result = await self.database.some_operation(param1, param2)
+        
+        # 4. INFO: Log successful completion
+        self.logger.info(f"Operation completed successfully: {result}")
+        
+        # 5. DEBUG: Log function exit with return value (if safe)
+        self.logger.debug(f"my_function completed, returning success=True")
+        return True, "Success"
+        
+    except SpecificException as e:
+        # 6. WARNING: Log expected exceptions
+        self.logger.warning(f"Expected error in my_function: {e}")
+        return False, f"Expected error: {str(e)}"
+        
+    except Exception as e:
+        # 7. ERROR: Log unexpected exceptions
+        self.logger.error(f"Unexpected error in my_function: {e}", exc_info=True)
+        return False, f"Error: {str(e)}"
+```
+
+### 4. Database Operations Logging
+
+- **ALWAYS** log database operations:
+  - Before executing queries (DEBUG)
+  - After successful operations (INFO)
+  - On failures (ERROR)
+- **ALWAYS** include relevant IDs and operation details
+- **ALWAYS** use the `log_database_operation` helper when appropriate
+
+**Example:**
+```python
+async def create_group(self, name: str, leader_id: str) -> Optional[str]:
+    """Create a new group."""
+    self.logger.debug(f"create_group called with name={name}, leader_id={leader_id}")
+    
+    try:
+        self.logger.debug("Inserting group into database")
+        result = self.groups_collection.insert_one(group_doc)
+        
+        group_id = str(result.inserted_id)
+        self.logger.info(f"Group created successfully with ID: {group_id}")
+        return group_id
+        
+    except Exception as e:
+        self.logger.error(f"Error creating group: {e}", exc_info=True)
+        return None
+```
+
+### 5. API Call Logging
+
+- **ALWAYS** log API calls using the `log_api_call` helper method
+- **ALWAYS** include method, URL, status code, response time, and errors
+- **ALWAYS** log before making external API calls (DEBUG)
+- **ALWAYS** log after receiving responses (INFO for success, ERROR for failures)
+
+**Example:**
+```python
+from src.utils.logger import BibleStudyLogger
+
+self.logger.debug(f"Making API call: GET {url}")
+try:
+    response = await http_client.get(url)
+    BibleStudyLogger.log_api_call(
+        self.logger,
+        method="GET",
+        url=url,
+        status_code=response.status_code,
+        response_time=elapsed_time
+    )
+except Exception as e:
+    BibleStudyLogger.log_api_call(
+        self.logger,
+        method="GET",
+        url=url,
+        error=str(e)
+    )
+```
+
+### 6. Security and Sensitive Data
+
+- **NEVER** log passwords, tokens, or other sensitive information
+- **NEVER** log full credit card numbers or SSNs
+- **ALWAYS** mask sensitive data (e.g., `password=***`, `token=***`)
+- **ALWAYS** log security events using `log_security_event` helper
+
+**Example:**
+```python
+# BAD
+self.logger.debug(f"User login: email={email}, password={password}")
+
+# GOOD
+self.logger.debug(f"User login attempt: email={email}")
+
+# For security events
+BibleStudyLogger.log_security_event(
+    self.logger,
+    event_type="LOGIN_ATTEMPT",
+    user_id=user_id,
+    ip_address=request.client.host,
+    details="Failed login attempt"
+)
+```
+
+### 7. Performance Logging
+
+- **ALWAYS** log performance metrics for slow operations (>1 second)
+- **ALWAYS** use the `log_performance` helper for performance tracking
+- **ALWAYS** log database query times
+- **ALWAYS** log external API response times
+
+**Example:**
+```python
+import time
+from src.utils.logger import BibleStudyLogger
+
+start_time = time.time()
+result = await self.database.complex_query()
+elapsed = time.time() - start_time
+
+if elapsed > 1.0:
+    BibleStudyLogger.log_performance(
+        self.logger,
+        operation="complex_query",
+        duration=elapsed
+    )
+```
+
+### 8. Error Context
+
+- **ALWAYS** provide context in error messages
+- **ALWAYS** include relevant IDs, parameters, or state information
+- **ALWAYS** use descriptive error messages
+- **ALWAYS** log the full exception with `exc_info=True` in error handlers
+
+**Example:**
+```python
+# BAD
+self.logger.error("Error occurred")
+
+# GOOD
+self.logger.error(f"Error creating group with name={name}, leader_id={leader_id}: {e}", exc_info=True)
+```
+
+### 9. Conditional Logging
+
+- **ALWAYS** check conditions before logging to avoid unnecessary log noise
+- **ALWAYS** use appropriate log levels to filter noise in production
+- **ALWAYS** log important state changes even if they're expected
+
+**Example:**
+```python
+if result.deleted_count > 0:
+    self.logger.info(f"Removed {result.deleted_count} group role(s)")
+else:
+    self.logger.warning(f"No group roles found to remove")
+```
+
+### 10. Logging in Controllers
+
+- **ALWAYS** log controller entry points (DEBUG)
+- **ALWAYS** log request parameters (DEBUG, excluding sensitive data)
+- **ALWAYS** log response preparation (INFO)
+- **ALWAYS** log controller errors (ERROR)
+
+**Example:**
+```python
+async def create_user_controller(self, request: CreateUserRequest) -> CreateUserResponse:
+    """Create a new user."""
+    self.logger.debug(f"create_user_controller called with email={request.email}")
+    
+    try:
+        success, message = await self.service.create_user(...)
+        
+        self.logger.info(f"User creation completed: success={success}")
+        return CreateUserResponse(success=success, message=message)
+        
+    except Exception as e:
+        self.logger.error(f"Error in create_user_controller: {e}", exc_info=True)
+        return CreateUserResponse(success=False, message=f"Error: {str(e)}")
+```
+
+### 11. Logging in Services
+
+- **ALWAYS** log business logic operations
+- **ALWAYS** log validation steps
+- **ALWAYS** log data transformations
+- **ALWAYS** use INFO for successful business operations
+
+**Example:**
+```python
+async def create_role(self, name: str, permissions: List[str]) -> tuple[bool, str, Optional[str]]:
+    """Create a new role."""
+    self.logger.debug(f"create_role called with name={name}, permissions={permissions}")
+    
+    try:
+        # Validate permissions
+        self.logger.debug("Validating permissions")
+        all_permissions = await self.database.get_all_permissions()
+        valid_actions = {perm['action'] for perm in all_permissions}
+        
+        invalid_permissions = [p for p in permissions if p not in valid_actions]
+        if invalid_permissions:
+            self.logger.warning(f"Invalid permissions provided: {invalid_permissions}")
+            return False, f"Invalid permissions: {invalid_permissions}", None
+        
+        # Create role
+        role_id = await self.database.create_role(name, permissions)
+        
+        if role_id:
+            self.logger.info(f"Role created successfully: {role_id}")
+            return True, "Role created successfully", role_id
+        else:
+            self.logger.warning("Failed to create role (may already exist)")
+            return False, "Failed to create role", None
+            
+    except Exception as e:
+        self.logger.error(f"Error creating role: {e}", exc_info=True)
+        return False, f"Error creating role: {str(e)}", None
+```
+
+### 12. Logging in Database Layer
+
+- **ALWAYS** log database connection issues (CRITICAL)
+- **ALWAYS** log query execution (DEBUG)
+- **ALWAYS** log successful operations (INFO)
+- **ALWAYS** log database errors (ERROR)
+- **ALWAYS** log unexpected query results (WARNING)
+
+**Example:**
+```python
+async def get_group_by_id(self, group_id: str) -> Optional[dict]:
+    """Get a group by ID."""
+    self.logger.debug(f"get_group_by_id called with group_id={group_id}")
+    
+    try:
+        self.logger.debug("Querying database for group")
+        group = self.groups_collection.find_one({'_id': ObjectId(group_id)})
+        
+        if group:
+            group['id'] = str(group['_id'])
+            del group['_id']
+            self.logger.debug(f"Group found: {group_id}")
+            return group
+        else:
+            self.logger.warning(f"Group not found: {group_id}")
+            return None
+            
+    except Exception as e:
+        self.logger.error(f"Error getting group by ID {group_id}: {e}", exc_info=True)
+        return None
+```
+
+## Summary Checklist
+
+When writing code, ensure you:
+
+- [ ] Import `get_logger` from `src.utils.logger`
+- [ ] Instantiate logger in `__init__` as `self.logger = get_logger(__name__)`
+- [ ] Log initialization success with `info`
+- [ ] Add `debug` log at function start with parameters
+- [ ] Add `debug` logs before risky operations
+- [ ] Add `info` logs for successful operations
+- [ ] Add `warning` logs for unexpected but non-error results
+- [ ] Add `error` logs in all `except` blocks with `exc_info=True`
+- [ ] Add `debug` log at function end (when appropriate)
+- [ ] Never log sensitive data (passwords, tokens, etc.)
+- [ ] Include context in error messages (IDs, parameters)
+- [ ] Use helper methods for structured logging (API calls, DB operations, etc.)
+
+## Best Practices
+
+1. **Be Descriptive**: Use clear, descriptive log messages that explain what happened
+2. **Include Context**: Always include relevant IDs, parameters, or state information
+3. **Use Appropriate Levels**: Don't use ERROR for warnings, don't use DEBUG for important info
+4. **Log at Boundaries**: Log at service boundaries, API boundaries, and database boundaries
+5. **Avoid Log Spam**: Don't log in tight loops or high-frequency operations without throttling
+6. **Structured Logging**: Use the helper methods for structured logging when available
+7. **Consistent Format**: Follow the established patterns for consistency
+8. **Production Ready**: Ensure logs are useful in production debugging scenarios

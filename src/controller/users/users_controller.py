@@ -4,6 +4,10 @@ from src.models.users import (
     create_user_response,
     login_user_response,
     get_user_response,
+    register_fcm_token_request,
+    register_fcm_token_response,
+    unregister_fcm_token_request,
+    unregister_fcm_token_response,
     User
 )
 from src.utils.logger import get_logger
@@ -107,4 +111,61 @@ class UsersController:
         except Exception as e:
             self.logger.error(f"Error in get_user controller: {e}")
             return get_user_response(user=None, message=f"Error getting user: {str(e)}")
+    
+    async def register_fcm_token(
+        self,
+        request: register_fcm_token_request
+    ) -> register_fcm_token_response:
+        """
+        Register FCM token for a user.
+        
+        Args:
+            request: register_fcm_token_request object
+            
+        Returns:
+            register_fcm_token_response object
+        """
+        try:
+            success, message = await self.users_service.register_fcm_token(
+                user_id=request.userId,
+                fcm_token=request.fcmToken
+            )
+            return register_fcm_token_response(
+                success=success,
+                message=message
+            )
+        except Exception as e:
+            self.logger.error(f"Error in register_fcm_token controller: {e}")
+            return register_fcm_token_response(
+                success=False,
+                message=f"Error registering FCM token: {str(e)}"
+            )
+    
+    async def unregister_fcm_token(
+        self,
+        request: unregister_fcm_token_request
+    ) -> unregister_fcm_token_response:
+        """
+        Unregister FCM token for a user.
+        
+        Args:
+            request: unregister_fcm_token_request object
+            
+        Returns:
+            unregister_fcm_token_response object
+        """
+        try:
+            success, message = await self.users_service.unregister_fcm_token(
+                user_id=request.userId
+            )
+            return unregister_fcm_token_response(
+                success=success,
+                message=message
+            )
+        except Exception as e:
+            self.logger.error(f"Error in unregister_fcm_token controller: {e}")
+            return unregister_fcm_token_response(
+                success=False,
+                message=f"Error unregistering FCM token: {str(e)}"
+            )
 

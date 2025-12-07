@@ -36,6 +36,16 @@ class GroupMember(BaseModel):
     role: str
     joinedAt: datetime
 
+class GroupRequest(BaseModel):
+    """Model for a group request."""
+    id: str
+    groupId: str
+    userId: str
+    username: Optional[str] = None
+    requestMessage: str
+    createdAt: datetime
+    status: Optional[str] = "pending"  # pending, approved, rejected
+
 class ChatMessage(BaseModel):
     """Model for a chat message."""
     id: str
@@ -248,4 +258,26 @@ class LeaveGroupResponse(BaseModel):
     """Model for leave group response."""
     success: bool
     message: str
+
+class CreateGroupRequestRequest(BaseModel):
+    """Model for creating a group request."""
+    groupId: str
+    userId: str
+    requestMessage: Optional[str] = ""
+
+class CreateGroupRequestResponse(BaseModel):
+    """Model for create group request response."""
+    success: bool
+    message: str
+    requestId: Optional[str] = None
+
+class GetGroupRequestsRequest(BaseModel):
+    """Model for getting group requests."""
+    groupId: str
+
+class GetGroupRequestsResponse(BaseModel):
+    """Model for get group requests response."""
+    success: bool
+    message: str
+    requests: List[GroupRequest] = []
     
