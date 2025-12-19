@@ -1,6 +1,7 @@
 """Groups service - Application logic layer."""
 from typing import List, Optional
 from datetime import datetime
+from fastapi import UploadFile
 from src.models.groups import (
     GroupMember,
     ChatMessage,
@@ -394,6 +395,68 @@ class GroupsService:
             self.logger.error(f"Error getting group worksheets: {e}")
             return False, f"Error getting group worksheets: {str(e)}", []
     
+    async def upload_worksheet(
+        self,
+        groupId: str,
+        title: str,
+        file: UploadFile
+    ) -> tuple[bool, str, Optional[str], Optional[str], Optional[str], Optional[str]]:
+        """Upload a worksheet file."""
+        self.logger.debug(f"upload_worksheet called with groupId={groupId}, title={title}")
+        
+        try:
+            validated_data = await self._validate_worksheet_file(file)
+            if not validated_data[0]:
+                return (False, validated_data[1], None, None, None, None)
+            
+            file_type = validated_data[2]
+            
+            result = await self.groups_database.upload_worksheet_file(
+                groupId=groupId,
+                title=title,
+                file=file,
+                file_type=file_type
+            )
+            
+            if result[0]:
+                self.logger.info(f"Worksheet uploaded successfully: {result[2]}")
+                return result
+            else:
+                return (False, result[1], None, None, None, None)
+            
+        except Exception as e:
+            self.logger.error(f"Error uploading worksheet: {e}", exc_info=True)
+            return (False, f"Error uploading worksheet: {str(e)}", None, None, None, None)
+    
+    async def _validate_worksheet_file(
+        self,
+        file: UploadFile
+    ) -> tuple[bool, str, Optional[str]]:
+        """Validate worksheet file type."""
+        self.logger.debug(f"Validating file: {file.filename}")
+        
+        allowed_types = {
+            'application/pdf': 'pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
+        }
+        
+        if file.content_type not in allowed_types:
+            self.logger.warning(f"Invalid file type: {file.content_type}")
+            return (False, "Only PDF and DOCX files are allowed", None)
+        
+        file_type = allowed_types[file.content_type]
+        self.logger.debug(f"File validated successfully: {file_type}")
+        return (True, "File validated", file_type)
+    
+    async def get_worksheet_file(self, file_id: str):
+        """Get worksheet file from GridFS."""
+        self.logger.debug(f"get_worksheet_file called with file_id={file_id}")
+        try:
+            return await self.groups_database.get_file_from_gridfs(file_id)
+        except Exception as e:
+            self.logger.error(f"Error getting worksheet file: {e}", exc_info=True)
+            return None
+    
     async def join_group(
         self,
         groupId: str,
@@ -583,4 +646,41 @@ class GroupsService:
         except Exception as e:
             self.logger.error(f"Error deleting group role config: {e}", exc_info=True)
             return False, f"Error deleting group role config: {str(e)}"
+    
+    async def create_worksheet_text(
+        self,
+        groupId: str,
+        title: str,
+        content: str
+    ) -> tuple[bool, str, str]:
+        """Create a worksheet with HTML/text content."""
+        self.logger.debug(f"create_worksheet_text called with groupId={groupId}, title={title}")
+        
+        try:
+            # Validate inputs
+            if not title or not title.strip():
+                self.logger.warning("Title is empty")
+                return False, "Title cannot be empty", ""
+            
+            if not content or not content.strip():
+                self.logger.warning("Content is empty")
+                return False, "Content cannot be empty", ""
+            
+            # Create worksheet entry in database
+            worksheet_id = await self.groups_database.create_worksheet_text(
+                groupId=groupId,
+                title=title.strip(),
+                content=content
+            )
+            
+            if worksheet_id:
+                self.logger.info(f"Worksheet created successfully: {worksheet_id}")
+                return True, "Worksheet created successfully", worksheet_id
+            else:
+                self.logger.error("Failed to create worksheet entry")
+                return False, "Failed to create worksheet entry", ""
+                
+        except Exception as e:
+            self.logger.error(f"Error creating worksheet: {e}", exc_info=True)
+            return False, f"Error creating worksheet: {str(e)}", ""
 

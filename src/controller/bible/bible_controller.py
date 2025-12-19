@@ -76,14 +76,27 @@ class BibleController:
             bible_id: The ID of the bible to retrieve
             chapter_id: The ID of the chapter to retrieve
         """
+        self.logger.debug(f"get_bible_chapter_content called with bible_id={bible_id}, chapter_id={chapter_id}")
+        
         try:
             content = await self.bible_service.get_chapter_content(bible_id, chapter_id)
+            
+            if not content:
+                self.logger.warning(f"No content returned for bible_id={bible_id}, chapter_id={chapter_id}")
+                return BibleChapterContentResponse(
+                    content='',
+                    verse_count='0',
+                )
+            
             return await BibleService()._convert_to_bible_chapter_content_response(content)
         except Exception as e:
-            self.logger.error(f"Error fetching bible chapter content from API: {e}")
-            return []   
+            self.logger.error(f"Error fetching bible chapter content from API: {e}", exc_info=True)
+            return BibleChapterContentResponse(
+                content='',
+                verse_count='0',
+            )   
 
-    async def get_bible_chapter_content_by_verse(self, bible_id: str, verse_id: str) -> BibleChapterContentResponse:
+    async def get_bible_chapter_content_by_verse(self, bible_id: str, chapter_id: str, verse_id: str) -> BibleChapterContentResponse:
         """
         Get the content of a specific verse.
         

@@ -1,5 +1,6 @@
 """Groups routes - HTTP layer."""
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Query, Depends, File, UploadFile, Form
+from fastapi.responses import StreamingResponse
 from src.models.groups import (
     CreateGroupRequest,
     CreateGroupResponse,
@@ -35,7 +36,10 @@ from src.models.groups import (
     UpdateGroupRoleConfigRequest,
     UpdateGroupRoleConfigResponse,
     DeleteGroupRoleConfigRequest,
-    DeleteGroupRoleConfigResponse
+    DeleteGroupRoleConfigResponse,
+    UploadWorksheetResponse,
+    CreateWorksheetTextRequest,
+    CreateWorksheetTextResponse,
 )
 from src.controller.groups import GroupsController
 
@@ -240,6 +244,70 @@ async def get_worksheets(request: GetWorksheetsRequest = Depends()):
     """
     controller = GroupsController()
     return await controller.get_group_worksheets(groupId=request.groupId)
+
+
+@router.post("/upload_worksheet", response_model=UploadWorksheetResponse)
+async def upload_worksheet(
+    groupId: str = Form(...),
+    title: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Upload a worksheet file (PDF or DOCX) for a group.
+    
+    Form Parameters:
+        groupId: ID of the group
+        title: Title of the worksheet
+        file: The worksheet file (PDF or DOCX)
+    
+    Returns:
+        UploadWorksheetResponse with upload status and file information
+    """
+    controller = GroupsController()
+    return await controller.upload_worksheet(
+        groupId=groupId,
+        title=title,
+        file=file
+    )
+
+
+@router.get("/download_worksheet/{file_id}")
+async def download_worksheet(file_id: str):
+    """
+    Download a worksheet file (public endpoint for PDF viewer).
+    
+    Path Parameters:
+        file_id: ID of the file in GridFS
+    
+    Returns:
+        StreamingResponse with the file
+    
+    Note: This endpoint does not require authentication to allow
+    PDF viewers and download managers to access files.
+    """
+    controller = GroupsController()
+    return await controller.download_worksheet_file(file_id)
+
+
+@router.post("/create_worksheet_text", response_model=CreateWorksheetTextResponse)
+async def create_worksheet_text(request: CreateWorksheetTextRequest):
+    """
+    Create a worksheet with HTML/text content (no file upload).
+    
+    Request Body:
+        groupId: ID of the group
+        title: Title of the worksheet
+        content: HTML/text content of the worksheet
+    
+    Returns:
+        CreateWorksheetTextResponse with creation status
+    """
+    controller = GroupsController()
+    return await controller.create_worksheet_text(
+        groupId=request.groupId,
+        title=request.title,
+        content=request.content
+    )
 
 
 @router.post("/join_group", response_model=JoinGroupResponse)

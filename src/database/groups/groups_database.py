@@ -5,6 +5,10 @@ from src.utils.logger import get_logger
 from src.utils.config_loader import load_config
 from pymongo import MongoClient
 from bson import ObjectId
+from gridfs import GridFS
+from fastapi import UploadFile
+from fastapi.responses import StreamingResponse
+import io
 import os
 
 class GroupsDatabase:
@@ -29,6 +33,7 @@ class GroupsDatabase:
         self.permissions_collection = self.db.permissions
         self.group_roles_collection = self.db.groupRoles
         self.group_requests_collection = self.db.groupRequests
+        self.fs = GridFS(self.db)
         self._initialize_database()
     
     def _initialize_database(self):
@@ -280,6 +285,360 @@ class GroupsDatabase:
         except Exception as e:
             self.logger.error(f"Error fetching group worksheets: {e}")
             return []
+    
+    async def upload_worksheet_file(
+        self,
+        groupId: str,
+        title: str,
+        file: UploadFile,
+        file_type: str
+    ) -> tuple[bool, str, Optional[str], Optional[str], Optional[str], Optional[str]]:
+        """Upload a worksheet file to GridFS."""
+        self.logger.debug(f"upload_worksheet_file called for group {groupId}")
+        
+        try:
+            file_content = await self._read_file_content(file)
+            stored_file_id = await self._store_file_in_gridfs(
+                file, 
+                file_content, 
+                groupId, 
+                file_type
+            )
+            
+            extracted_content = await self._extract_text_from_file(
+                file_content, 
+                file_type
+            )
+            
+            worksheet_id = await self._create_worksheet_entry(
+                groupId, 
+                title, 
+                extracted_content, 
+                stored_file_id,
+                file_type
+            )
+            
+            if worksheet_id:
+                msg = "Worksheet uploaded successfully"
+                self.logger.info(f"Worksheet uploaded: {worksheet_id}")
+                return (True, msg, worksheet_id, stored_file_id, file.filename, file_type)
+            else:
+                return (False, "Failed to create worksheet entry", None, None, None, None)
+            
+        except Exception as e:
+            self.logger.error(f"Error uploading worksheet file: {e}", exc_info=True)
+            return (False, f"Error uploading file: {str(e)}", None, None, None, None)
+    
+    async def _read_file_content(self, file: UploadFile) -> bytes:
+        """Read file content."""
+        self.logger.debug(f"Reading file content: {file.filename}")
+        return await file.read()
+    
+    async def _store_file_in_gridfs(
+        self,
+        file: UploadFile,
+        file_content: bytes,
+        groupId: str,
+        file_type: str
+    ) -> str:
+        """Store file in GridFS."""
+        self.logger.debug(f"Storing file in GridFS: {file.filename}")
+        
+        file_id = self.fs.put(
+            file_content,
+            filename=file.filename,
+            content_type=file.content_type,
+            groupId=groupId,
+            file_type=file_type,
+            uploaded_at=datetime.utcnow()
+        )
+        
+        self.logger.info(f"File stored in GridFS with ID: {file_id}")
+        return str(file_id)
+    
+    async def _extract_text_from_file(
+        self,
+        file_content: bytes,
+        file_type: str
+    ) -> str:
+        """Extract text content from file."""
+        self.logger.debug(f"Extracting text from {file_type} file")
+        
+        try:
+            if file_type == 'pdf':
+                return await self._extract_text_from_pdf(file_content)
+            elif file_type == 'docx':
+                return await self._extract_text_from_docx(file_content)
+            else:
+                return ""
+        except Exception as e:
+            self.logger.error(f"Error extracting text: {e}", exc_info=True)
+            return f"[Content extraction failed: {str(e)}]"
+    
+    async def _extract_text_from_pdf(self, file_content: bytes) -> str:
+        """Get PDF file information."""
+        self.logger.debug("Processing PDF file")
+        try:
+            from PyPDF2 import PdfReader
+            from io import BytesIO
+            
+            self.logger.debug(f"File content size: {len(file_content)} bytes")
+            pdf_file = BytesIO(file_content)
+            reader = PdfReader(pdf_file)
+            
+            page_count = len(reader.pages)
+            self.logger.info(f"PDF has {page_count} pages")
+            
+            return f"<p><strong>PDF Document</strong></p><p>This document has {page_count} page(s). The PDF will be displayed below.</p>"
+        except ImportError as e:
+            self.logger.error(f"Import error - PyPDF2 not installed: {e}", exc_info=True)
+            return "[PDF processing failed - library not installed]"
+        except Exception as e:
+            self.logger.error(f"Error processing PDF: {e}", exc_info=True)
+            return f"[PDF processing failed: {str(e)}]"
+    
+    async def _extract_text_from_docx(self, file_content: bytes) -> str:
+        """Extract formatted text from DOCX file as HTML."""
+        self.logger.debug("Starting DOCX text extraction with formatting")
+        try:
+            from docx import Document
+            from io import BytesIO
+            
+            self.logger.debug(f"File content size: {len(file_content)} bytes")
+            docx_file = BytesIO(file_content)
+            doc = Document(docx_file)
+            
+            html_content = self._convert_docx_to_html(doc)
+            
+            self.logger.info(f"Successfully extracted {len(html_content)} characters from DOCX")
+            return html_content if html_content else "[Empty document]"
+        except ImportError as e:
+            self.logger.error(f"Import error - python-docx not installed: {e}", exc_info=True)
+            return "[DOCX text extraction failed - library not installed]"
+        except Exception as e:
+            self.logger.error(f"Error extracting DOCX text: {e}", exc_info=True)
+            return f"[DOCX text extraction failed: {str(e)}]"
+    
+    def _convert_docx_to_html(self, doc) -> str:
+        """Convert DOCX document to HTML."""
+        html_parts = []
+        current_list = None
+        list_items = []
+        
+        for paragraph in doc.paragraphs:
+            if not paragraph.text.strip():
+                html_parts.append("<br>")
+                continue
+            
+            para_style = paragraph.style.name.lower() if paragraph.style else ""
+            is_list_item = any(x in para_style for x in ['list', 'bullet', 'number'])
+            
+            if is_list_item:
+                list_type = 'ol' if 'number' in para_style else 'ul'
+                if current_list != list_type:
+                    if current_list and list_items:
+                        html_parts.append(self._close_list(current_list, list_items))
+                        list_items = []
+                    current_list = list_type
+                
+                list_item = self._format_list_item(paragraph)
+                list_items.append(list_item)
+            else:
+                if current_list and list_items:
+                    html_parts.append(self._close_list(current_list, list_items))
+                    list_items = []
+                    current_list = None
+                
+                para_html = self._format_paragraph(paragraph)
+                html_parts.append(para_html)
+        
+        if current_list and list_items:
+            html_parts.append(self._close_list(current_list, list_items))
+        
+        for table in doc.tables:
+            table_html = self._format_table(table)
+            html_parts.append(table_html)
+        
+        return "\n".join(html_parts)
+    
+    def _close_list(self, list_type: str, items: list) -> str:
+        """Close a list with all its items."""
+        items_html = "\n".join(items)
+        return f"<{list_type}>\n{items_html}\n</{list_type}>"
+    
+    def _format_list_item(self, paragraph) -> str:
+        """Format a list item."""
+        indent_level = self._get_indent_level(paragraph)
+        indent_style = f"margin-left: {indent_level * 20}px;" if indent_level > 0 else ""
+        content = self._format_runs(paragraph)
+        return f"<li style='{indent_style}'>{content}</li>"
+    
+    def _format_paragraph(self, paragraph) -> str:
+        """Format a paragraph to HTML."""
+        text = paragraph.text
+        if not text.strip():
+            return "<br>"
+        
+        style = paragraph.style.name.lower() if paragraph.style else ""
+        content = self._format_runs(paragraph)
+        
+        indent_level = self._get_indent_level(paragraph)
+        alignment = self._get_alignment(paragraph)
+        
+        style_attrs = []
+        if indent_level > 0:
+            style_attrs.append(f"margin-left: {indent_level * 40}px")
+        if alignment:
+            style_attrs.append(f"text-align: {alignment}")
+        
+        style_str = f" style='{'; '.join(style_attrs)}'" if style_attrs else ""
+        
+        if "heading 1" in style:
+            return f"<h1{style_str}>{content}</h1>"
+        elif "heading 2" in style:
+            return f"<h2{style_str}>{content}</h2>"
+        elif "heading 3" in style:
+            return f"<h3{style_str}>{content}</h3>"
+        elif "heading 4" in style:
+            return f"<h4{style_str}>{content}</h4>"
+        else:
+            return f"<p{style_str}>{content}</p>"
+    
+    def _get_indent_level(self, paragraph) -> int:
+        """Get paragraph indent level."""
+        try:
+            if paragraph.paragraph_format.left_indent:
+                indent_pt = paragraph.paragraph_format.left_indent.pt
+                return int(indent_pt / 36)
+        except:
+            pass
+        return 0
+    
+    def _get_alignment(self, paragraph) -> str:
+        """Get paragraph alignment."""
+        try:
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            alignment = paragraph.alignment
+            if alignment == WD_ALIGN_PARAGRAPH.CENTER:
+                return "center"
+            elif alignment == WD_ALIGN_PARAGRAPH.RIGHT:
+                return "right"
+            elif alignment == WD_ALIGN_PARAGRAPH.JUSTIFY:
+                return "justify"
+        except:
+            pass
+        return ""
+    
+    def _format_runs(self, paragraph) -> str:
+        """Format runs with bold, italic, underline, and other formatting."""
+        formatted_text = ""
+        for run in paragraph.runs:
+            text = run.text.replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+            text = text.replace('\n', '<br>')
+            
+            styles = []
+            if hasattr(run.font, 'color') and run.font.color and run.font.color.rgb:
+                try:
+                    rgb = run.font.color.rgb
+                    color = f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+                    styles.append(f"color: {color}")
+                except:
+                    pass
+            
+            if hasattr(run.font, 'size') and run.font.size:
+                try:
+                    size_pt = run.font.size.pt
+                    styles.append(f"font-size: {size_pt}pt")
+                except:
+                    pass
+            
+            style_attr = f" style='{'; '.join(styles)}'" if styles else ""
+            
+            if run.bold and run.italic and run.underline:
+                text = f"<strong><em><u{style_attr}>{text}</u></em></strong>"
+            elif run.bold and run.italic:
+                text = f"<strong><em{style_attr}>{text}</em></strong>"
+            elif run.bold and run.underline:
+                text = f"<strong><u{style_attr}>{text}</u></strong>"
+            elif run.italic and run.underline:
+                text = f"<em><u{style_attr}>{text}</u></em>"
+            elif run.bold:
+                text = f"<strong{style_attr}>{text}</strong>"
+            elif run.italic:
+                text = f"<em{style_attr}>{text}</em>"
+            elif run.underline:
+                text = f"<u{style_attr}>{text}</u>"
+            elif style_attr:
+                text = f"<span{style_attr}>{text}</span>"
+            
+            formatted_text += text
+        return formatted_text
+    
+    def _format_table(self, table) -> str:
+        """Format a table to HTML."""
+        html = "<table border='1' style='border-collapse: collapse; width: 100%;'>"
+        
+        for row in table.rows:
+            html += "<tr>"
+            for cell in row.cells:
+                cell_text = cell.text.strip()
+                html += f"<td style='padding: 8px; border: 1px solid #ddd;'>{cell_text}</td>"
+            html += "</tr>"
+        
+        html += "</table>"
+        return html
+    
+    async def _create_worksheet_entry(
+        self,
+        groupId: str,
+        title: str,
+        content: str,
+        file_id: str,
+        file_type: str = 'html'
+    ) -> Optional[str]:
+        """Create worksheet entry in database."""
+        self.logger.debug("Creating worksheet entry in database")
+        
+        try:
+            worksheet_doc = {
+                'groupId': ObjectId(groupId),
+                'title': title,
+                'content': content,
+                'fileId': file_id,
+                'contentType': file_type,
+                'createdAt': datetime.utcnow(),
+                'updatedAt': datetime.utcnow()
+            }
+            
+            result = self.worksheets_collection.insert_one(worksheet_doc)
+            return str(result.inserted_id)
+        except Exception as e:
+            self.logger.error(f"Error creating worksheet entry: {e}")
+            return None
+    
+    async def get_file_from_gridfs(self, file_id: str) -> Optional[StreamingResponse]:
+        """Get file from GridFS."""
+        self.logger.debug(f"Getting file from GridFS: {file_id}")
+        try:
+            grid_out = self.fs.get(ObjectId(file_id))
+            
+            filename = grid_out.filename
+            content_type = grid_out.content_type
+            
+            file_content = grid_out.read()
+            
+            self.logger.info(f"Retrieved file: {filename}, size: {len(file_content)} bytes")
+            
+            return StreamingResponse(
+                io.BytesIO(file_content),
+                media_type=content_type,
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}"
+                }
+            )
+        except Exception as e:
+            self.logger.error(f"Error getting file from GridFS: {e}", exc_info=True)
+            return None
     
     async def join_group(
         self,
@@ -1047,4 +1406,35 @@ class GroupsDatabase:
         except Exception as e:
             self.logger.error(f"Error getting membership with role: {e}", exc_info=True)
             return None
+    
+    async def create_worksheet_text(
+        self,
+        groupId: str,
+        title: str,
+        content: str
+    ) -> str:
+        """Create a worksheet with HTML/text content (no file)."""
+        self.logger.debug(f"create_worksheet_text called with groupId={groupId}, title={title}")
+        
+        try:
+            worksheet_doc = {
+                'groupId': ObjectId(groupId),
+                'title': title,
+                'content': content,
+                'fileId': None,  # No file for text worksheets
+                'contentType': 'html',  # Mark as HTML content
+                'createdAt': datetime.utcnow(),
+                'updatedAt': datetime.utcnow()
+            }
+            
+            self.logger.debug("Inserting worksheet into database")
+            result = self.worksheets_collection.insert_one(worksheet_doc)
+            worksheet_id = str(result.inserted_id)
+            
+            self.logger.info(f"Worksheet created successfully with ID: {worksheet_id}")
+            return worksheet_id
+            
+        except Exception as e:
+            self.logger.error(f"Error creating worksheet: {e}", exc_info=True)
+            return ""
 

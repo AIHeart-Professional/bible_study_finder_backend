@@ -48,6 +48,9 @@ from .groups_model import (
     CreateWorksheetResponse,
     GetWorksheetsRequest,
     GetWorksheetsResponse,
+    UploadWorksheetResponse,
+    CreateWorksheetTextRequest,
+    CreateWorksheetTextResponse,
 )
 from .role_models import (
     GroupRoleConfig,
@@ -107,6 +110,9 @@ __all__ = [
     "CreateWorksheetResponse",
     "GetWorksheetsRequest",
     "GetWorksheetsResponse",
+    "UploadWorksheetResponse",
+    "CreateWorksheetTextRequest",
+    "CreateWorksheetTextResponse",
     "GroupRoleConfig",
     "CreateGroupRoleConfigRequest",
     "CreateGroupRoleConfigResponse",

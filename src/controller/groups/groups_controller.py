@@ -1,5 +1,7 @@
 """Groups controller - Business logic distributor layer."""
 from typing import Optional
+from fastapi import UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
 from src.models.groups import (
     CreateGroupResponse,
     InitializeGroupResponse,
@@ -20,7 +22,9 @@ from src.models.groups import (
     CreateGroupRoleConfigResponse,
     GetGroupRoleConfigsResponse,
     UpdateGroupRoleConfigResponse,
-    DeleteGroupRoleConfigResponse
+    DeleteGroupRoleConfigResponse,
+    UploadWorksheetResponse,
+    CreateWorksheetTextResponse
 )
 from src.utils.logger import get_logger
 from src.services.groups_service import GroupsService
@@ -280,6 +284,53 @@ class GroupsController:
                 worksheets=[]
             )
     
+    async def upload_worksheet(
+        self,
+        groupId: str,
+        title: str,
+        file: UploadFile
+    ) -> UploadWorksheetResponse:
+        """Upload a worksheet file."""
+        try:
+            result = await self.groups_service.upload_worksheet(
+                groupId=groupId,
+                title=title,
+                file=file
+            )
+            
+            return UploadWorksheetResponse(
+                success=result[0],
+                message=result[1],
+                worksheetId=result[2],
+                fileId=result[3],
+                fileName=result[4],
+                fileType=result[5]
+            )
+        except Exception as e:
+            self.logger.error(f"Error in upload_worksheet controller: {e}")
+            return UploadWorksheetResponse(
+                success=False,
+                message=f"Error uploading worksheet: {str(e)}",
+                worksheetId=None,
+                fileId=None,
+                fileName=None,
+                fileType=None
+            )
+    
+    async def download_worksheet_file(self, file_id: str) -> StreamingResponse:
+        """Download a worksheet file."""
+        self.logger.debug(f"download_worksheet_file called with file_id={file_id}")
+        try:
+            file_data = await self.groups_service.get_worksheet_file(file_id)
+            
+            if not file_data:
+                raise HTTPException(status_code=404, detail="File not found")
+            
+            return file_data
+        except Exception as e:
+            self.logger.error(f"Error downloading worksheet: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    
     async def join_group(
         self,
         groupId: str,
@@ -517,4 +568,34 @@ class GroupsController:
             return DeleteGroupRoleConfigResponse(
                 success=False,
                 message=f"Error deleting group role config: {str(e)}"
+            )
+    
+    async def create_worksheet_text(
+        self,
+        groupId: str,
+        title: str,
+        content: str
+    ) -> CreateWorksheetTextResponse:
+        """Create a worksheet with HTML/text content."""
+        try:
+            self.logger.debug(f"create_worksheet_text controller called with groupId={groupId}, title={title}")
+            
+            success, message, worksheet_id = await self.groups_service.create_worksheet_text(
+                groupId=groupId,
+                title=title,
+                content=content
+            )
+            
+            self.logger.info(f"Worksheet creation completed: success={success}, worksheetId={worksheet_id}")
+            return CreateWorksheetTextResponse(
+                success=success,
+                message=message,
+                worksheetId=worksheet_id
+            )
+        except Exception as e:
+            self.logger.error(f"Error in create_worksheet_text controller: {e}", exc_info=True)
+            return CreateWorksheetTextResponse(
+                success=False,
+                message=f"Error creating worksheet: {str(e)}",
+                worksheetId=None
             )
