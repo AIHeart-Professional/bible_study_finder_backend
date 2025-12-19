@@ -120,31 +120,61 @@ class BibleService:
             book=bible_chapter_data.get('bookId', ''),
         )
 
-    async def get_chapter_content(self, bible_id: str, chapter_id: str) -> List[BibleChapterContentResponse]:
+    async def get_chapter_content(self, bible_id: str, chapter_id: str) -> dict:
         """Get the content of a specific chapter."""
+        self.logger.debug(f"get_chapter_content called with bible_id={bible_id}, chapter_id={chapter_id}")
+        
         try:
             url = f"{self.base_url}/bibles/{bible_id}/chapters/{chapter_id}"
+            self.logger.debug(f"Making API call: GET {url}")
+            
             response = requests.get(
                 url,
                 headers=self.headers,
                 timeout=10
             )
+            
             if response.status_code == 200:
-                return response.json()['data']
+                data = response.json()['data']
+                self.logger.info(f"Successfully fetched chapter content for chapter_id={chapter_id}")
+                return data
             else:
                 self.logger.error(f"API returned status code for chapter content: {response.status_code}: {response.text}")
-                return []
+                return {}
         except Exception as e:
-            self.logger.error(f"Error fetching chapter content from API: {e}")
+            self.logger.error(f"Error fetching chapter content from API: {e}", exc_info=True)
+            return {}
 
     async def _convert_to_bible_chapter_content_response(self, bible_chapter_content_data: dict) -> BibleChapterContentResponse:
         """Convert API.Bible format to our BibleChapterContentResponse format."""
+        self.logger.debug(f"Converting chapter content data: {bible_chapter_content_data.keys() if bible_chapter_content_data else 'None'}")
+        
+        if not bible_chapter_content_data:
+            self.logger.warning("Empty chapter content data provided")
+            return BibleChapterContentResponse(
+                content='',
+                verse_count='0',
+            )
+        
+        # verseCount from API.Bible is an integer, convert to string
+        verse_count = bible_chapter_content_data.get('verseCount', 0)
+        if isinstance(verse_count, int):
+            verse_count = str(verse_count)
+        elif verse_count is None:
+            verse_count = '0'
+        else:
+            verse_count = str(verse_count)
+        
+        content = bible_chapter_content_data.get('content', '')
+        
+        self.logger.debug(f"Converted chapter content: verse_count={verse_count}, content_length={len(content) if content else 0}")
+        
         return BibleChapterContentResponse(
-            content=bible_chapter_content_data.get('content', ''),
-            verse_count=bible_chapter_content_data.get('verseCount', ''),
+            content=content,
+            verse_count=verse_count,
         )
 
-    async def get_chapter_content_by_verse(self, bible_id: str, verse_id: str) -> List[BibleChapterContentByVerseResponse]:
+    async def get_chapter_content_by_verse(self, bible_id: str, chapter_id: str, verse_id: str) -> List[BibleChapterContentByVerseResponse]:
         """Get the content of a specific verse."""
         try:
             url = f"{self.base_url}/bibles/{bible_id}/verses/{verse_id}"

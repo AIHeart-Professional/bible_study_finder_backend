@@ -156,3 +156,5 @@ Thumbs.db
 logs/
 *.log
 
+# firebase
+config/firebase-service-account.json

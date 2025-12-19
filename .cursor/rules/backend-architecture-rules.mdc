@@ -1,0 +1,182 @@
+---
+alwaysApply: true
+---
+
+# Backend Architecture Rules
+
+This backend MUST strictly follow the MVC architecture pattern with a clear separation of concerns and unidirectional call hierarchy.
+
+## Required File Structure
+
+The backend MUST follow this exact structure:
+
+```
+bible_study_finder_backend/
+├── main.py                    # Main application entry point
+├── config.py                  # Application configuration
+├── cors_config.py             # CORS configuration
+├── requirements.txt           # Python dependencies
+├── README.md                  # Documentation
+└── src/
+    ├── routes/                # API endpoints (HTTP layer)
+    │   ├── __init__.py
+    │   ├── bible_routes.py
+    │   ├── groups_routes.py
+    │   └── users_routes.py
+    ├── controller/            # Business logic distributors
+    │   ├── bible/
+    │   │   ├── __init__.py
+    │   │   └── bible_controller.py
+    │   ├── groups/
+    │   │   ├── __init__.py
+    │   │   └── groups_controller.py
+    │   └── users/
+    │       ├── __init__.py
+    │       └── users_controller.py
+    ├── services/              # Application logic layer
+    │   ├── bible_service.py
+    │   ├── groups_service.py
+    │   └── users_service.py
+    ├── database/              # Database logic layer
+    │   ├── __init__.py
+    │   ├── bible_database.py
+    │   ├── groups_database.py
+    │   └── users_database.py
+    ├── models/                # Data models
+    │   ├── bible/
+    │   ├── groups/
+    │   └── users/
+    ├── utils/                 # Utility functions
+    │   ├── config_loader.py
+    │   └── logger.py
+    └── static/                # Static files
+        └── config.yaml
+```
+
+## Architecture Layers
+
+### 1. Routes (API Layer)
+- **Location**: `src/routes/`
+- **Purpose**: Define HTTP endpoints and handle request/response
+- **Responsibilities**:
+  - Define FastAPI routes and endpoints
+  - Validate request parameters using Pydantic models
+  - Call corresponding controller methods
+  - Return HTTP responses
+
+### 2. Controllers (Distributor Layer)
+- **Location**: `src/controller/{domain}/`
+- **Purpose**: Distribute requests from routes to appropriate services
+- **Responsibilities**:
+  - Receive calls from routes
+  - Coordinate service calls
+  - Transform service responses to API response models
+  - Handle business-level error handling and logging
+
+### 3. Services (Application Logic Layer)
+- **Location**: `src/services/{domain}/`
+- **Purpose**: Implement core application business logic
+- **Responsibilities**:
+  - Implement business rules and validation
+  - Orchestrate database operations
+  - Call database layer for data persistence/retrieval
+  - Transform data between database and domain models
+
+### 4. Database (Data Access Layer)
+- **Location**: `src/database/{domain}/`
+- **Purpose**: Handle all database operations
+- **Responsibilities**:
+  - Execute SQL queries
+  - Handle database connections
+  - Map database results to domain models
+  - Manage transactions
+
+## Strict Call Hierarchy (MANDATORY)
+
+The call flow MUST ALWAYS follow this unidirectional hierarchy:
+
+```
+Routes → Controllers → Services → Database
+```
+
+### ALLOWED Calls:
+- ✅ **Routes** CAN call **Controllers**
+- ✅ **Controllers** CAN call **Services**
+- ✅ **Services** CAN call **Database**
+- ✅ **Routes** CAN use **Models** for request/response validation
+- ✅ **Controllers** CAN use **Models** for data transformation
+- ✅ **Services** CAN use **Models** for business logic
+- ✅ **Database** CAN use **Models** for data mapping
+- ✅ Any layer CAN use **Utils** for shared utilities
+
+### FORBIDDEN Calls (Strictly Prohibited):
+- ❌ **Routes** CANNOT call **Services** or **Database** directly
+- ❌ **Controllers** CANNOT call **Routes** or **Database** directly
+- ❌ **Services** CANNOT call **Controllers** or **Routes**
+- ❌ **Database** CANNOT call **Services**, **Controllers**, or **Routes**
+- ❌ **No reverse calls** - Lower layers CANNOT call higher layers
+
+## Naming Conventions
+
+- **Routes**: `{domain}_routes.py` (e.g., `bible_routes.py`, `groups_routes.py`)
+- **Controllers**: `{domain}_controller.py` (e.g., `bible_controller.py`)
+- **Services**: `{domain}_service.py` (e.g., `bible_service.py`)
+- **Models**: `{domain}_model.py` (e.g., `bible_model.py`)
+- **Database**: `{domain}_database.py` (e.g., `bible_database.py`)
+
+## Example Implementation Pattern
+
+### Route Example:
+```python
+# src/routes/bible_routes.py
+@router.get("/get_bibles")
+async def get_bibles(request: BibleRequest):
+    return await BibleController().get_bibles(request.language)
+```
+
+### Controller Example:
+```python
+# src/controller/bible/bible_controller.py
+async def get_bibles_controller(self, language: str):
+    return await self.bible_service.get_bibles(language)
+```
+
+### Service Example:
+```python
+# src/services/bible/bible_service.py
+async def get_bibles_service(self, language: str):
+    return await self.bible_database.fetch_bibles(language)
+```
+
+### Database Example:
+```python
+# src/database/bible/bible_database.py
+async def fetch_bibles(self, language: str):
+    # SQL query execution
+    return results
+```
+
+## Enforcement Rules
+
+1. **ALWAYS** create files in the correct directory structure
+2. **NEVER** skip layers in the call chain
+3. **NEVER** allow reverse dependencies
+4. **ALWAYS** maintain one-way data flow
+5. **ALWAYS** organize related files by domain (bible, groups, users, etc.)
+6. **ALWAYS** initialize functions in __init__.py
+7. **ALWAYS** Make sure every function is 15 or less lines of code
+8. **ALWAYS** Only have a function do EXACTLY what it is titled (i.e. create_user_service() should call a private  _create_password() function, but NEVER do that work itself).
+9. **ALWAYS** write code assuming I'm using the programming languages and tools in my Programming Languages section.
+
+## Programming Languages
+
+- Python
+- MongoDB
+
+## Migration Notes
+
+When refactoring existing code:
+- Move database queries from services to `src/database/`
+- Ensure services only call database layer, not execute queries directly
+- Ensure controllers only call services, never database
+- Ensure routes only call controllers, never services or database

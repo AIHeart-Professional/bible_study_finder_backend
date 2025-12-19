@@ -47,7 +47,15 @@ def get_cors_settings() -> dict:
             "X-CSRF-Token",
             "X-API-Key",
             "User-Agent",
-            "Referer"
+            "Referer",
+            "Range"  # Required for PDF streaming
+        ],
+        "expose_headers": [
+            "Content-Range",
+            "Accept-Ranges", 
+            "Content-Length",
+            "Content-Disposition",
+            "Content-Type"
         ],
     }
     
@@ -107,4 +115,5 @@ def setup_cors(app: FastAPI):
         allow_credentials=cors_settings["allow_credentials"],
         allow_methods=cors_settings["allow_methods"],
         allow_headers=cors_settings["allow_headers"],
+        expose_headers=cors_settings.get("expose_headers", []),
     )

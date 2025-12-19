@@ -86,6 +86,7 @@ class BibleChapterContentResponse(BaseModel):
 class BibleChapterContentByVerseRequest(BaseModel):
     """Model for a Bible chapter content by verse request."""
     bible_id: str
+    chapter_id: str
     verse_id: str
 
 class BibleChapterContentByVerseResponse(BaseModel):
