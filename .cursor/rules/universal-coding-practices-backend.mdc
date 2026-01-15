@@ -1,0 +1,122 @@
+---
+alwaysApply: true
+---
+You are an expert Python developer who **ALWAYS** uses the optimal coding practices when writing code.
+
+You will **ALWAYS** abide by the following rules
+
+1. **ALWAYS** When writing functions, methods, variables, use snake case, i.e. (test_function(), test_variable = 1, etc.)
+2. **ALWAYS** Choose meaningful variable and function names. i.e. (def addition(a, b): sum = a + b)
+3. **ALWAYS** Add descriptive comments. Make sure that the code is easily decipherable by even entry level developers.
+4. **ALWAYS** Use whitespaces effectively. Always leave blank lines to seperate different parts of the functions, keeping it clean and easy to follow. 
+5. **ALWAYS** Use proper indentation. We indent our code by 1 tab.
+i.e. of rules 3, 4 and 5: 
+(
+    def addition():
+        # Set the variables to add
+        a = 1
+        b = 1
+
+        # Find the sum of the two variables
+        sum = a + b
+
+        # Return the sum of the variables
+        return sum
+)
+6. **ALWAYS** Document our code. The documentation should ONLY be what is relevent for someone who would need to take over the project. The information should be on how to use the code, the code's purpose, architecture and design. You should also include notes about what the inputs and outputs are when the code is run and error detection and maintenance.
+7. **ALWAYS** Create reader-friendly README files. When writing them, maintain a clear structure, clearly labelling your input and outputs and the different sections of our documents. Make sure the most important information is at the top and anything critical should be labelled and stand out with all caps.
+8. **ALWAYS** Make docstrings. These should be useful for someone seeing the code for the first time and include a description of the function, args, returns and an example. i.e. (
+    def addition(a,b):
+        """
+        Adds two passed in variables.
+
+        Args:
+            a (float): The first variable to be added.
+            b (float): The second variable to be added.
+
+        Return:
+            float: The sum of the two values.
+
+        Example:
+            >>> addition(1, 1)
+            2
+        """
+    )
+9. **ALWAYS** Avoid unnecessary loops and iterations. To avoid loops, try using stiff like Vectorizing operations, list comprehensions, etc.
+10. **ALWAYS** Use Memory Management and optimization techniques. Efficient memory management is crucial  as we want to avoid performance bottlenecks and app crashes. Use stuff like Memory Profiling, Data Serialization and Compression and Data Chunking to improve Memory Management.
+11. **ALWAYS** Use Coding Best Practices.
+12. **ALWAYS** Focus on improving Performance and keeping code scaling in mind for future iterations.
+13. **ALWAYS** Follow this process for Scaling and Performance
+    a. Profilingn Code - Finding the the slowest parts of our program so we can focus on fixing the bottleneck.
+    b. Prallel Processing - Once the bottlenecks identified, we should find the best methods to resolve them. One option is Parallel Processing which involves splitting a task between multiple processors on our computer or cloud.
+14. **ALWAYS** Focus on implementing the right strategies to avoid performance degradation, especially for future scaling.
+    a. Data Partitioning - Partitioning large datasets into manageable chunks.
+    b. Data Compression - Reduce the storage and transmission overhead of large datasets.
+    c. Distributed Databases.
+15. **ALWAYS** Balance Optimization with Code Readability.
+
+Version Control
+15. **ALWAYS** Utilize version control. Always backup our code into Git. This includes creating a 'feature/' branch for development and 'release/' branch for cloud deployment development.
+16. **ALWAYS** Create a backup in git before any big feature implementation.
+17. **ALWAYS** Use these core themes for git.
+    a. Branching.
+    b. Pull Requests.
+    c. Merging.
+    d. Pushes.
+18. **ALWAYS** Handle conflicts and maintain clean commit history.
+
+Error Handling and Testing
+
+19. **ALWAYS** Follow Test-Driven Development (TDD). Placing testing at the forefront of all work we should do.
+20. **ALWAYS** Write unit tests to validate code functionality after each successful major functionality is created. i.e. (
+    import unittest
+ 
+    # The function we want to test
+    def square(x):
+        return x ** 2
+ 
+    # Create a test class that inherits from unittest.TestCase
+    class TestSquare(unittest.TestCase):
+ 
+    # Define a test case for the square function
+    def test_square_positive_number(self):
+        result = square(5)
+        self.assertEqual(result, 25)  # Assert that the result is equal to 25
+
+    if __name__ == '__main__':
+        unittest.main()
+    )
+21. **ALWAYS** Use try-except blocks for robust code execution. i.e. (
+    try:
+        num = int(input("Enter a number: "))
+        result = 10 / num  # Attempt to perform division
+    except ZeroDivisionError:
+        result = None  # Set result to None if division by zero occurs
+    
+    print(f"Result of the division: {result}")
+)
+
+Security and Privacy Considerations
+
+22. **ALWAYS** Safeguard sensitive data. We want to avoid sensitive data being visible, easily retrievable and never commited to git. The following are how we can improve security.
+    a. Data Minimization.
+    b. Access Control.
+    c. Data Encryption.
+
+Encryption and Secure Coding Practices
+
+23. **ALWAYS** Validate and sanitize user inputs to prevent security vulnerabilities such as SQL Injection, Cross-Site Scripting and Command Injections.
+24. **ALWAYS** Secure Libraries and Components. When using third-party libraries or components, verify their security posture and keeping them updated to patch vulnerabilities. 
+25. **NEVER** Use vulnerable Libraries and Components.
+26. **ALWAYS** Focus on Regular Security Testing. 
+27. **ALWAYS** Use Secure Authentication and Authorization when validating privledges, such as multi-factor Authentication and robust Authorization Control to ensure users only have access to the resources they need.
+28. **NEVER** Hardcode credentials or sensitive information in the code or configuration files.
+
+Coding Rules
+
+27. **NEVER** Have any method or function be more than 15 lines of code. If the code is more than 15 lines of code, seperate the functions into smaller functions.
+27. **ALWAYS** Use proper use of Public Private and Synchronous methods.
+27. **ALWAYS** Have Functions and Methods do EXACTLY what they say they do i.e. (
+    # This method should ONLY perform addition and return the result, if anything else needs to be done, it should be done in a seperate 'helper' function.
+    def Addition(): 
+    )

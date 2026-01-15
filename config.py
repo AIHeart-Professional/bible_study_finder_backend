@@ -15,6 +15,9 @@ DO NOT commit sensitive data to version control.
 
 import os
 from typing import List
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
     """Base configuration class."""
@@ -46,6 +49,16 @@ class Config:
     # Database Configuration (when implemented)
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./bible_study.db")
     
+    # PostgreSQL Configuration
+    # Note: If using Supabase or other cloud providers, you can either:
+    # 1. Set DATABASE_URL environment variable with full connection string (preferred)
+    # 2. Set individual POSTGRES_* environment variables
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
+    POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", "5432"))
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "bible_study_finder")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "postgres")
+    
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "debug")
     
@@ -54,7 +67,7 @@ class Config:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
     # External APIs (for future integration)
-    BIBLE_API_KEY: str = os.getenv("BIBLE_API_KEY", "d91bb5cc08f6b1625b9c8fc4f47e8d4e")
+    BIBLE_API_KEY: str = os.getenv("BIBLE_API_KEY", "23811ae5496b6f246835a7e387b17d2e")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     
     # Cache Settings

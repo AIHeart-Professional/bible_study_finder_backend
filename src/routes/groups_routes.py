@@ -1,18 +1,14 @@
 """Groups routes - HTTP layer."""
-from fastapi import APIRouter, Query, Depends, File, UploadFile, Form
+from fastapi import APIRouter, Query, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from src.models.groups import (
     CreateGroupRequest,
     CreateGroupResponse,
     InitializeGroupRequest,
     InitializeGroupResponse,
-    GetUsersRequest,
     GetUsersResponse,
-    GetChatRequest,
     GetChatResponse,
-    GetMealsRequest,
     GetMealsResponse,
-    GetStudyPlanRequest,
     GetStudyPlanResponse,
     GetGroupsResponse,
     GetGroupResponse,
@@ -20,7 +16,6 @@ from src.models.groups import (
     CreateGroupChatResponse,
     CreateWorksheetRequest,
     CreateWorksheetResponse,
-    GetWorksheetsRequest,
     GetWorksheetsResponse,
     JoinGroupRequest,
     JoinGroupResponse,
@@ -130,7 +125,7 @@ async def initialize_group(request: InitializeGroupRequest):
 
 
 @router.get("/get_users", response_model=GetUsersResponse)
-async def get_users(request: GetUsersRequest = Depends()):
+async def get_users(groupId: str = Query(..., description="ID of the group")):
     """
     Get all users (members) of a group.
     
@@ -141,11 +136,11 @@ async def get_users(request: GetUsersRequest = Depends()):
         GetUsersResponse with list of group members
     """
     controller = GroupsController()
-    return await controller.get_group_users(groupId=request.groupId)
+    return await controller.get_group_users(groupId=groupId)
 
 
 @router.get("/get_chat", response_model=GetChatResponse)
-async def get_chat(request: GetChatRequest = Depends()):
+async def get_chat(groupId: str = Query(..., description="ID of the group")):
     """
     Get all chat messages for a group.
     
@@ -156,11 +151,11 @@ async def get_chat(request: GetChatRequest = Depends()):
         GetChatResponse with list of chat messages
     """
     controller = GroupsController()
-    return await controller.get_group_chat(groupId=request.groupId)
+    return await controller.get_group_chat(groupId=groupId)
 
 
 @router.get("/get_meals", response_model=GetMealsResponse)
-async def get_meals(request: GetMealsRequest):
+async def get_meals(groupId: str = Query(..., description="ID of the group")):
     """
     Get all meals for a group.
     
@@ -171,11 +166,11 @@ async def get_meals(request: GetMealsRequest):
         GetMealsResponse with list of meals
     """
     controller = GroupsController()
-    return await controller.get_group_meals(groupId=request.groupId)
+    return await controller.get_group_meals(groupId=groupId)
 
 
 @router.get("/get_study_plan", response_model=GetStudyPlanResponse)
-async def get_study_plan(request: GetStudyPlanRequest):
+async def get_study_plan(groupId: str = Query(..., description="ID of the group")):
     """
     Get all study plans for a group.
     
@@ -186,7 +181,7 @@ async def get_study_plan(request: GetStudyPlanRequest):
         GetStudyPlanResponse with list of study plans
     """
     controller = GroupsController()
-    return await controller.get_group_study_plans(groupId=request.groupId)
+    return await controller.get_group_study_plans(groupId=groupId)
 
 
 @router.post("/create_group_chat", response_model=CreateGroupChatResponse)
@@ -232,7 +227,7 @@ async def create_worksheet(request: CreateWorksheetRequest):
 
 
 @router.get("/get_worksheets", response_model=GetWorksheetsResponse)
-async def get_worksheets(request: GetWorksheetsRequest = Depends()):
+async def get_worksheets(groupId: str = Query(..., description="ID of the group")):
     """
     Get all worksheets for a group.
     
@@ -243,7 +238,7 @@ async def get_worksheets(request: GetWorksheetsRequest = Depends()):
         GetWorksheetsResponse with list of worksheets
     """
     controller = GroupsController()
-    return await controller.get_group_worksheets(groupId=request.groupId)
+    return await controller.get_group_worksheets(groupId=groupId)
 
 
 @router.post("/upload_worksheet", response_model=UploadWorksheetResponse)

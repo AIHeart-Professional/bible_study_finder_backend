@@ -6,7 +6,6 @@ from src.models.users import (
     login_user_request,
     login_user_response,
     get_user_response,
-    get_user_request,
     register_fcm_token_request,
     register_fcm_token_response,
     unregister_fcm_token_request,
@@ -65,7 +64,7 @@ async def login_user(request: login_user_request):
 
 
 @router.get("/get_user", response_model=get_user_response)
-async def get_user(request: get_user_request):
+async def get_user(username: str = Query(..., description="The username of the user to retrieve")):
     """
     Get user information by username.
     
@@ -76,7 +75,7 @@ async def get_user(request: get_user_request):
         get_user_response with user information
     """
     controller = UsersController()
-    return await controller.get_user(username=request.username)
+    return await controller.get_user(username=username)
 
 
 @router.post("/register_fcm_token", response_model=register_fcm_token_response)
