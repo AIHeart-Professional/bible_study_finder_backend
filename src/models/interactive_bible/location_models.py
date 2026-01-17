@@ -22,6 +22,11 @@ class ChapterLocationResponse(BaseModel):
 class ChapterCharacterResponse(BaseModel):
 	"""Model for chapter character response."""
 	name: str
+	book: str
+	chapter: int
+	verse: int
+	longitude: float
+	latitude: float
 
 class VerseCharacterResponse(BaseModel):
 	"""Model for verse character response."""
@@ -29,4 +34,6 @@ class VerseCharacterResponse(BaseModel):
 	chapter: int
 	verse: int
 	name: str
+	longitude: float
+	latitude: float
 

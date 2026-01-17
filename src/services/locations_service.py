@@ -63,7 +63,7 @@ class LocationsService:
 			chapter: Chapter number
 		
 		Returns:
-			List of character dictionaries with name
+			List of character dictionaries with name, book, chapter, verse, longitude, latitude
 		"""
 		self.logger.debug(f"get_characters_from_chapter called with book={book}, chapter={chapter}")
 		
@@ -87,7 +87,7 @@ class LocationsService:
 			verse: Verse number
 		
 		Returns:
-			List of character dictionaries with book, chapter, verse, name
+			List of character dictionaries with name, book, chapter, verse, longitude, latitude
 		"""
 		self.logger.debug(f"get_characters_from_verse called with book={book}, chapter={chapter}, verse={verse}")
 		

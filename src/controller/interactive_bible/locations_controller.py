@@ -87,7 +87,7 @@ class LocationsController:
 			chapter: Chapter number
 		
 		Returns:
-			List of ChapterCharacterResponse objects with name
+			List of ChapterCharacterResponse objects with name, book, chapter, verse, longitude, latitude
 		"""
 		self.logger.debug(f"get_characters_from_chapter called with book={book}, chapter={chapter}")
 		
@@ -95,7 +95,14 @@ class LocationsController:
 			characters_data = await self.locations_service.get_characters_from_chapter(book, chapter)
 			
 			characters = [
-				ChapterCharacterResponse(name=char['name'])
+				ChapterCharacterResponse(
+					name=char['name'],
+					book=char['book'],
+					chapter=char['chapter'],
+					verse=char['verse'],
+					longitude=char['longitude'],
+					latitude=char['latitude']
+				)
 				for char in characters_data
 			]
 			
@@ -116,7 +123,7 @@ class LocationsController:
 			verse: Verse number
 		
 		Returns:
-			List of VerseCharacterResponse objects with book, chapter, verse, name
+			List of VerseCharacterResponse objects with name, book, chapter, verse, longitude, latitude
 		"""
 		self.logger.debug(f"get_characters_from_verse called with book={book}, chapter={chapter}, verse={verse}")
 		
@@ -125,10 +132,12 @@ class LocationsController:
 			
 			characters = [
 				VerseCharacterResponse(
+					name=char['name'],
 					book=char['book'],
 					chapter=char['chapter'],
 					verse=char['verse'],
-					name=char['name']
+					longitude=char['longitude'],
+					latitude=char['latitude']
 				)
 				for char in characters_data
 			]

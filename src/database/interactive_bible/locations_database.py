@@ -147,14 +147,14 @@ class LocationsDatabase:
 	async def get_characters_from_chapter(self, book: str, chapter: int) -> List[dict]:
 		"""
 		Get all character names from a specific chapter.
-		Finds characters by matching verse_id pattern (book.chapter.verse) in verse_characters table.
+		Finds characters by matching book and chapter in verse_characters table.
 		
 		Args:
 			book: Book name (e.g., 'Mark')
 			chapter: Chapter number
 		
 		Returns:
-			List of character dictionaries with name
+			List of character dictionaries with name, book, chapter, verse, longitude, latitude
 		"""
 		self.logger.debug(f"get_characters_from_chapter called with book={book}, chapter={chapter}")
 		
@@ -165,18 +165,21 @@ class LocationsDatabase:
 			
 			self.logger.debug("Executing SQL query to get characters from chapter")
 			
-			# Build verse_id pattern: "Mark.1.%"
-			verse_pattern = f"{book}.{chapter}.%"
-			
 			query = """
-				SELECT DISTINCT bc.name
+				SELECT 
+					bc.name,
+					vc.book,
+					vc.chapter,
+					vc.verse,
+					vc.longitude,
+					vc.latitude
 				FROM verse_characters vc
 				JOIN bible_characters bc ON vc.character_id = bc.id
-				WHERE vc.verse_id LIKE %s
-				ORDER BY bc.name
+				WHERE vc.book = %s AND vc.chapter = %s
+				ORDER BY vc.verse, bc.name
 			"""
 			
-			cursor.execute(query, (verse_pattern,))
+			cursor.execute(query, (book, chapter))
 			results = cursor.fetchall()
 			
 			self.logger.debug(f"Query returned {len(results)} characters")
@@ -184,7 +187,12 @@ class LocationsDatabase:
 			characters = []
 			for row in results:
 				character = {
-					'name': row['name']
+					'name': row['name'],
+					'book': row['book'],
+					'chapter': int(row['chapter']),
+					'verse': int(row['verse']),
+					'longitude': float(row['longitude']) if row['longitude'] is not None else 0.0,
+					'latitude': float(row['latitude']) if row['latitude'] is not None else 0.0
 				}
 				characters.append(character)
 			
@@ -203,7 +211,7 @@ class LocationsDatabase:
 	async def get_characters_from_verse(self, book: str, chapter: int, verse: int) -> List[dict]:
 		"""
 		Get all character names from a specific verse.
-		Finds characters by matching exact verse_id (book.chapter.verse) in verse_characters table.
+		Finds characters by matching exact book, chapter, and verse in verse_characters table.
 		
 		Args:
 			book: Book name (e.g., 'Mark')
@@ -211,7 +219,7 @@ class LocationsDatabase:
 			verse: Verse number
 		
 		Returns:
-			List of character dictionaries with book, chapter, verse, name
+			List of character dictionaries with name, book, chapter, verse, longitude, latitude
 		"""
 		self.logger.debug(f"get_characters_from_verse called with book={book}, chapter={chapter}, verse={verse}")
 		
@@ -222,18 +230,21 @@ class LocationsDatabase:
 			
 			self.logger.debug("Executing SQL query to get characters from verse")
 			
-			# Build exact verse_id: "Mark.1.21"
-			verse_id = f"{book}.{chapter}.{verse}"
-			
 			query = """
-				SELECT DISTINCT bc.name
+				SELECT 
+					bc.name,
+					vc.book,
+					vc.chapter,
+					vc.verse,
+					vc.longitude,
+					vc.latitude
 				FROM verse_characters vc
 				JOIN bible_characters bc ON vc.character_id = bc.id
-				WHERE vc.verse_id = %s
+				WHERE vc.book = %s AND vc.chapter = %s AND vc.verse = %s
 				ORDER BY bc.name
 			"""
 			
-			cursor.execute(query, (verse_id,))
+			cursor.execute(query, (book, chapter, verse))
 			results = cursor.fetchall()
 			
 			self.logger.debug(f"Query returned {len(results)} characters")
@@ -241,10 +252,12 @@ class LocationsDatabase:
 			characters = []
 			for row in results:
 				character = {
-					'book': book,
-					'chapter': chapter,
-					'verse': verse,
-					'name': row['name']
+					'name': row['name'],
+					'book': row['book'],
+					'chapter': int(row['chapter']),
+					'verse': int(row['verse']),
+					'longitude': float(row['longitude']) if row['longitude'] is not None else 0.0,
+					'latitude': float(row['latitude']) if row['latitude'] is not None else 0.0
 				}
 				characters.append(character)
 			
