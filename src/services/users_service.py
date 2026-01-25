@@ -45,12 +45,12 @@ class UsersService:
         """
         return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
     
-    def _generate_token(self, user_id: str, email: str) -> str:
+    def _generate_token(self, user_id: int, email: str) -> str:
         """
         Generate a JWT token for the user.
         
         Args:
-            user_id: User's ID
+            user_id: User's ID (int)
             email: User's email
             
         Returns:
@@ -89,9 +89,8 @@ class UsersService:
         Returns:
             User model instance
         """
-        user_id = str(user_data['id'])
         return User(
-            id=user_id,
+            public_id=str(user_data.get('public_id', '')),
             first_name=user_data['first_name'],
             last_name=user_data['last_name'],
             username=user_data['username'],
@@ -201,12 +200,12 @@ class UsersService:
             self.logger.error(f"Error getting user: {e}")
             return False, f"Error getting user: {str(e)}", None
     
-    async def register_fcm_token(self, user_id: str, fcm_token: str) -> tuple[bool, str]:
+    async def register_fcm_token(self, user_id: int, fcm_token: str) -> tuple[bool, str]:
         """
         Register FCM token for a user.
         
         Args:
-            user_id: User's ID
+            user_id: User's ID (int)
             fcm_token: FCM token string
             
         Returns:
@@ -223,13 +222,13 @@ class UsersService:
         except Exception as e:
             self.logger.error(f"Error registering FCM token: {e}")
             return False, f"Error registering FCM token: {str(e)}"
-    
-    async def unregister_fcm_token(self, user_id: str) -> tuple[bool, str]:
+
+    async def unregister_fcm_token(self, user_id: int) -> tuple[bool, str]:
         """
         Unregister FCM token for a user.
         
         Args:
-            user_id: User's ID
+            user_id: User's ID (int)
             
         Returns:
             Tuple of (success: bool, message: str)

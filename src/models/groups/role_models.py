@@ -1,24 +1,24 @@
-"""Role models for group role management."""
+"""Role models for group role management (BIGINT IDs)."""
 from typing import List, Optional
 from pydantic import BaseModel
 
 class Permission(BaseModel):
     """Model for a permission."""
-    id: str
+    id: int
     action: str
     description: str
 
 class Role(BaseModel):
     """Model for a role."""
-    id: str
+    id: int
     name: str
     permissions: List[str]  # List of permission action strings
 
 class GroupRole(BaseModel):
     """Model for a user's role in a group."""
-    id: str
-    userId: str
-    groupId: str
+    id: int
+    userId: int
+    groupId: int
     role: str  # Role name (e.g., "admin", "moderator")
 
 # Request Models
@@ -34,21 +34,21 @@ class CreatePermissionRequest(BaseModel):
 
 class CreateGroupRoleRequest(BaseModel):
     """Model for assigning a role to a user in a group."""
-    userId: str
-    groupId: str
+    userId: int
+    groupId: int
     role: str  # Role name
 
 class RemoveGroupRoleRequest(BaseModel):
     """Model for removing a role from a user in a group."""
-    userId: str
-    groupId: str
+    userId: int
+    groupId: int
 
 # Response Models
 class CreateRoleResponse(BaseModel):
     """Model for create role response."""
     success: bool
     message: str
-    roleId: Optional[str] = None
+    roleId: Optional[int] = None
 
 class GetRolesResponse(BaseModel):
     """Model for get roles response."""
@@ -60,7 +60,7 @@ class CreatePermissionResponse(BaseModel):
     """Model for create permission response."""
     success: bool
     message: str
-    permissionId: Optional[str] = None
+    permissionId: Optional[int] = None
 
 class GetPermissionsResponse(BaseModel):
     """Model for get permissions response."""
@@ -72,7 +72,7 @@ class CreateGroupRoleResponse(BaseModel):
     """Model for create group role response."""
     success: bool
     message: str
-    groupRoleId: Optional[str] = None
+    groupRoleId: Optional[int] = None
 
 class GetGroupRolesResponse(BaseModel):
     """Model for get group roles response."""
@@ -99,7 +99,7 @@ class GetRoleResponse(BaseModel):
 
 class ModifyPermissionRequest(BaseModel):
     """Model for modifying a permission."""
-    permissionId: str
+    permissionId: int
     action: Optional[str] = None
     description: Optional[str] = None
 
@@ -110,7 +110,7 @@ class ModifyPermissionResponse(BaseModel):
 
 class ModifyRoleRequest(BaseModel):
     """Model for modifying a role."""
-    roleId: str
+    roleId: int
     name: Optional[str] = None
     permissions: Optional[List[str]] = None
 
@@ -121,8 +121,8 @@ class ModifyRoleResponse(BaseModel):
 
 class ModifyGroupRoleRequest(BaseModel):
     """Model for modifying a group role."""
-    userId: str
-    groupId: str
+    userId: int
+    groupId: int
     role: str
 
 class ModifyGroupRoleResponse(BaseModel):
@@ -132,7 +132,7 @@ class ModifyGroupRoleResponse(BaseModel):
 
 class RemovePermissionRequest(BaseModel):
     """Model for removing a permission."""
-    permissionId: str
+    permissionId: int
 
 class RemovePermissionResponse(BaseModel):
     """Model for remove permission response."""
@@ -141,7 +141,7 @@ class RemovePermissionResponse(BaseModel):
 
 class RemoveRoleRequest(BaseModel):
     """Model for removing a role."""
-    roleId: str
+    roleId: int
 
 class RemoveRoleResponse(BaseModel):
     """Model for remove role response."""
@@ -150,7 +150,7 @@ class RemoveRoleResponse(BaseModel):
 
 class RemoveRoleFromGroupRequest(BaseModel):
     """Model for removing a role from a group by role name."""
-    groupId: str
+    groupId: int
     role: str
 
 class RemoveRoleFromGroupResponse(BaseModel):
@@ -161,14 +161,14 @@ class RemoveRoleFromGroupResponse(BaseModel):
 
 class GroupRoleConfig(BaseModel):
     """Model for a group-specific role configuration."""
-    id: str
-    groupId: str
+    id: int
+    groupId: int
     roleName: str
     permissions: List[str]
 
 class CreateGroupRoleConfigRequest(BaseModel):
     """Model for creating a group role configuration."""
-    groupId: str
+    groupId: int
     roleName: str
     permissions: List[str]
 
@@ -176,11 +176,11 @@ class CreateGroupRoleConfigResponse(BaseModel):
     """Model for create group role config response."""
     success: bool
     message: str
-    groupRoleId: Optional[str] = None
+    groupRoleId: Optional[int] = None
 
 class GetGroupRoleConfigsRequest(BaseModel):
     """Model for getting group role configurations."""
-    groupId: str
+    groupId: int
 
 class GetGroupRoleConfigsResponse(BaseModel):
     """Model for get group role configs response."""
@@ -190,7 +190,7 @@ class GetGroupRoleConfigsResponse(BaseModel):
 
 class UpdateGroupRoleConfigRequest(BaseModel):
     """Model for updating a group role configuration."""
-    groupId: str
+    groupId: int
     roleName: str
     permissions: List[str]
 
@@ -201,11 +201,10 @@ class UpdateGroupRoleConfigResponse(BaseModel):
 
 class DeleteGroupRoleConfigRequest(BaseModel):
     """Model for deleting a group role configuration."""
-    groupId: str
+    groupId: int
     roleName: str
 
 class DeleteGroupRoleConfigResponse(BaseModel):
     """Model for delete group role config response."""
     success: bool
     message: str
-

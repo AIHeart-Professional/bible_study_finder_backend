@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic import BaseModel
 
 class Location(BaseModel):
@@ -15,21 +15,21 @@ class Location(BaseModel):
 
 class StudyPlan(BaseModel):
     """Model for a study plan."""
-    id: str
+    id: str # This ID is within the JSONB array, usually string-based or unique within array
     title: str
     description: str
     createdAt: datetime
 
 class Meal(BaseModel):
     """Model for a meal."""
-    id: str
+    id: str # This ID is within the JSONB array
     mealName: str
     description: str
     createdAt: datetime
 
 class GroupMember(BaseModel):
     """Model for a group member."""
-    userId: str
+    userId: str  # UUID public_id
     username: str
     email: str
     portraitUrl: Optional[str] = None
@@ -38,9 +38,9 @@ class GroupMember(BaseModel):
 
 class GroupRequest(BaseModel):
     """Model for a group request."""
-    id: str
-    groupId: str
-    userId: str
+    id: int
+    groupId: str  # UUID public_id
+    userId: str  # UUID public_id
     username: Optional[str] = None
     requestMessage: str
     createdAt: datetime
@@ -48,18 +48,18 @@ class GroupRequest(BaseModel):
 
 class ChatMessage(BaseModel):
     """Model for a chat message."""
-    id: str
-    userId: str
+    id: int
+    userId: str  # UUID public_id
     username: str
     message: str
     sentAt: datetime
 
 class Group(BaseModel):
     """Model for a group."""
-    id: str
+    public_id: str  # UUID (public-facing)
     name: str
     description: str
-    leaderUserId: str
+    leaderUserId: str  # UUID public_id
     location: Location
     image: Optional[str] = None
     createdAt: datetime
@@ -70,36 +70,36 @@ class CreateGroupRequest(BaseModel):
     """Model for creating a new group."""
     name: str
     description: str
-    leaderUserId: str
+    leaderUserId: str  # public_id (UUID) of the leader
     location: Location
     image: Optional[str] = None
 
 class InitializeGroupRequest(BaseModel):
     """Model for initializing a group."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetUsersRequest(BaseModel):
     """Model for getting group users."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetChatRequest(BaseModel):
     """Model for getting group chat."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetMealsRequest(BaseModel):
     """Model for getting group meals."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetStudyPlanRequest(BaseModel):
     """Model for getting group study plans."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 # Response Models
 class CreateGroupResponse(BaseModel):
     """Model for create group response."""
     success: bool
     message: str
-    groupId: Optional[str] = None
+    groupPublicId: Optional[str] = None  # UUID public_id
 
 class InitializeGroupResponse(BaseModel):
     """Model for initialize group response."""
@@ -113,7 +113,7 @@ class GetUsersResponse(BaseModel):
     users: List[GroupMember] = []
     memberCount: int = 0
 
-class GetChatResponse(BaseModel):
+class GetGroupChatResponse(BaseModel):
     """Model for get chat response."""
     success: bool
     message: str
@@ -145,8 +145,8 @@ class GetGroupResponse(BaseModel):
 
 class Worksheet(BaseModel):
     """Model for a Bible worksheet."""
-    id: str
-    groupId: str
+    id: int
+    groupPublicId: str  # UUID public_id
     title: str
     content: str
     createdAt: datetime
@@ -154,19 +154,19 @@ class Worksheet(BaseModel):
 
 class CreateGroupChatRequest(BaseModel):
     """Model for creating a group chat message."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
     message: str
 
 class CreateGroupChatResponse(BaseModel):
     """Model for create group chat response."""
     success: bool
     message: str
-    chatId: Optional[str] = None
+    chatId: Optional[int] = None
 
 class CreateWorksheetRequest(BaseModel):
     """Model for creating a Bible worksheet."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
     title: str
     content: str
 
@@ -174,11 +174,11 @@ class CreateWorksheetResponse(BaseModel):
     """Model for create worksheet response."""
     success: bool
     message: str
-    worksheetId: Optional[str] = None
+    worksheetId: Optional[int] = None
 
 class GetWorksheetsRequest(BaseModel):
     """Model for getting group worksheets."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetWorksheetsResponse(BaseModel):
     """Model for get worksheets response."""
@@ -188,8 +188,8 @@ class GetWorksheetsResponse(BaseModel):
 
 class AddGroupMemberRequest(BaseModel):
     """Model for adding a group member."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
 
 class AddGroupMemberResponse(BaseModel):
     """Model for add group member response."""
@@ -198,8 +198,8 @@ class AddGroupMemberResponse(BaseModel):
 
 class RemoveGroupMemberRequest(BaseModel):  
     """Model for removing a group member."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
 
 class RemoveGroupMemberResponse(BaseModel):
     """Model for remove group member response."""
@@ -208,8 +208,8 @@ class RemoveGroupMemberResponse(BaseModel):
 
 class UpdateGroupMemberRequest(BaseModel):
     """Model for updating a group member."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
     role: str
 
 class UpdateGroupMemberResponse(BaseModel):
@@ -219,7 +219,7 @@ class UpdateGroupMemberResponse(BaseModel):
 
 class GetGroupMembersRequest(BaseModel):
     """Model for getting group members."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetGroupMembersResponse(BaseModel):
     """Model for get group members response."""
@@ -230,8 +230,8 @@ class GetGroupMembersResponse(BaseModel):
 
 class GetGroupMemberRequest(BaseModel):
     """Model for getting a group member."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
 
 class GetGroupMemberResponse(BaseModel):
     """Model for get group member response."""
@@ -241,8 +241,8 @@ class GetGroupMemberResponse(BaseModel):
 
 class JoinGroupRequest(BaseModel):
     """Model for joining a group."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
 
 class JoinGroupResponse(BaseModel):
     """Model for join group response."""
@@ -251,8 +251,8 @@ class JoinGroupResponse(BaseModel):
 
 class LeaveGroupRequest(BaseModel):
     """Model for leaving a group."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
 
 class LeaveGroupResponse(BaseModel):
     """Model for leave group response."""
@@ -261,19 +261,19 @@ class LeaveGroupResponse(BaseModel):
 
 class CreateGroupRequestRequest(BaseModel):
     """Model for creating a group request."""
-    groupId: str
-    userId: str
+    groupPublicId: str  # UUID public_id
+    userPublicId: str  # UUID public_id
     requestMessage: Optional[str] = ""
 
 class CreateGroupRequestResponse(BaseModel):
     """Model for create group request response."""
     success: bool
     message: str
-    requestId: Optional[str] = None
+    requestId: Optional[int] = None
 
 class GetGroupRequestsRequest(BaseModel):
     """Model for getting group requests."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetGroupRequestsResponse(BaseModel):
     """Model for get group requests response."""
@@ -283,8 +283,8 @@ class GetGroupRequestsResponse(BaseModel):
 
 class GroupRoleConfig(BaseModel):
     """Model for a group role configuration."""
-    id: str
-    groupId: str
+    id: int
+    groupPublicId: str  # UUID public_id
     roleName: str
     permissions: List[str]
     createdAt: datetime
@@ -292,7 +292,7 @@ class GroupRoleConfig(BaseModel):
 
 class CreateGroupRoleConfigRequest(BaseModel):
     """Model for creating a group role configuration."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
     roleName: str
     permissions: List[str]
 
@@ -300,11 +300,11 @@ class CreateGroupRoleConfigResponse(BaseModel):
     """Model for create group role config response."""
     success: bool
     message: str
-    groupRoleId: Optional[str] = None
+    groupRoleId: Optional[int] = None
 
 class GetGroupRoleConfigsRequest(BaseModel):
     """Model for getting group role configs."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
 
 class GetGroupRoleConfigsResponse(BaseModel):
     """Model for get group role configs response."""
@@ -314,7 +314,7 @@ class GetGroupRoleConfigsResponse(BaseModel):
 
 class UpdateGroupRoleConfigRequest(BaseModel):
     """Model for updating a group role configuration."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
     roleName: str
     permissions: List[str]
 
@@ -325,7 +325,7 @@ class UpdateGroupRoleConfigResponse(BaseModel):
 
 class DeleteGroupRoleConfigRequest(BaseModel):
     """Model for deleting a group role configuration."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
     roleName: str
 
 class DeleteGroupRoleConfigResponse(BaseModel):
@@ -337,22 +337,19 @@ class UploadWorksheetResponse(BaseModel):
     """Model for upload worksheet response."""
     success: bool
     message: str
-    worksheetId: Optional[str] = None
-    fileId: Optional[str] = None
+    worksheetId: Optional[int] = None
+    fileId: Optional[int] = None
     fileName: Optional[str] = None
     fileType: Optional[str] = None
 
-
 class CreateWorksheetTextRequest(BaseModel):
     """Model for create worksheet text request."""
-    groupId: str
+    groupPublicId: str  # UUID public_id
     title: str
     content: str
-
 
 class CreateWorksheetTextResponse(BaseModel):
     """Model for create worksheet text response."""
     success: bool
     message: str
-    worksheetId: Optional[str] = None
-    
+    worksheetId: Optional[int] = None

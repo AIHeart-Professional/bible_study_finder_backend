@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class User(BaseModel):
     """Model for a user."""
-    id: str  # MongoDB ObjectId string
+    public_id: str  # UUID (public-facing)
     first_name: str
     last_name: str
     username: str

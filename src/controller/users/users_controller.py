@@ -28,7 +28,7 @@ class UsersController:
         username: str,
         email: str,
         password: str,
-        attended_churches: Optional[List[str]] = None
+        attended_churches: Optional[List[int]] = None
     ) -> create_user_response:
         """
         Create a new user.
