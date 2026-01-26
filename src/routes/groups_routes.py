@@ -62,7 +62,15 @@ async def create_group(request: CreateGroupRequest):
         description=request.description,
         leaderPublicId=request.leaderUserId,
         location=request.location.dict(),
-        image=request.image
+        meetingStartTime=request.meetingStartTime,
+        meetingEndTime=request.meetingEndTime,
+        genderFocus=request.genderFocus,
+        meetingDays=request.meetingDays,
+        demographic=request.demographic,
+        groupType=request.groupType,
+        meetingConsistency=request.meetingConsistency,
+        meetingFormat=request.meetingFormat,
+        status=request.status
     )
 
 @router.post("/initialize_group", response_model=InitializeGroupResponse)

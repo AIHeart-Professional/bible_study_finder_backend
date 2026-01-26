@@ -1,5 +1,6 @@
 """Groups controller - Business logic distributor layer (BIGINT IDs)."""
 from typing import Optional, List
+from datetime import datetime
 from fastapi import UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from src.models.groups import (
@@ -44,18 +45,34 @@ class GroupsController:
         description: str,
         leaderPublicId: str,
         location: dict,
-        image: Optional[str] = None
+        meetingStartTime: Optional[datetime] = None,
+        meetingEndTime: Optional[datetime] = None,
+        genderFocus: Optional[str] = None,
+        meetingDays: Optional[List[str]] = None,
+        demographic: Optional[str] = None,
+        groupType: Optional[str] = None,
+        meetingConsistency: Optional[str] = None,
+        meetingFormat: Optional[str] = None,
+        status: Optional[str] = None
     ) -> CreateGroupResponse:
         """Create a new group."""
         try:
-            success, message, group_id = await self.groups_service.create_group(
+            success, message, group_public_id = await self.groups_service.create_group(
                 name=name,
                 description=description,
                 leaderPublicId=leaderPublicId,
                 location=location,
-                image=image
+                meetingStartTime=meetingStartTime,
+                meetingEndTime=meetingEndTime,
+                genderFocus=genderFocus,
+                meetingDays=meetingDays,
+                demographic=demographic,
+                groupType=groupType,
+                meetingConsistency=meetingConsistency,
+                meetingFormat=meetingFormat,
+                status=status
             )
-            return CreateGroupResponse(success=success, message=message, groupPublicId=group_id)
+            return CreateGroupResponse(success=success, message=message, groupPublicId=group_public_id)
         except Exception as e:
             self.logger.error(f"Error in create_group controller: {e}")
             return CreateGroupResponse(success=False, message=f"Error creating group: {str(e)}")

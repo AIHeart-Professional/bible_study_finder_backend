@@ -54,24 +54,37 @@ class GroupsService:
         description: str,
         leaderPublicId: str,
         location: dict,
-        image: Optional[str] = None
+        meetingStartTime: Optional[datetime] = None,
+        meetingEndTime: Optional[datetime] = None,
+        genderFocus: Optional[str] = None,
+        meetingDays: Optional[List[str]] = None,
+        demographic: Optional[str] = None,
+        groupType: Optional[str] = None,
+        meetingConsistency: Optional[str] = None,
+        meetingFormat: Optional[str] = None,
+        status: Optional[str] = None
     ) -> tuple[bool, str, Optional[str]]:
         """Create a new group."""
         try:
             location_dict = self._convert_location(location)
-            group_id = await self.groups_database.create_group(
+            group_public_id = await self.groups_database.create_group(
                 name=name,
                 description=description,
                 leaderPublicId=leaderPublicId,
                 location=location_dict,
-                image=image
+                meetingStartTime=meetingStartTime,
+                meetingEndTime=meetingEndTime,
+                genderFocus=genderFocus,
+                meetingDays=meetingDays,
+                demographic=demographic,
+                groupType=groupType,
+                meetingConsistency=meetingConsistency,
+                meetingFormat=meetingFormat,
+                status=status
             )
             
-            if group_id:
-                # Get the public_id for the created group
-                group_data = await self.groups_database.get_group_by_id(group_id)
-                group_public_id = str(group_data['public_id']) if group_data and group_data.get('public_id') else None
-                self.logger.info(f"Group created successfully: {group_id}, public_id: {group_public_id}")
+            if group_public_id:
+                self.logger.info(f"Group created successfully with public_id: {group_public_id}")
                 return True, "Group created successfully", group_public_id
             else:
                 return False, "Failed to create group (leader not found or invalid)", None
@@ -220,8 +233,18 @@ class GroupsService:
             name=group_data.get('name', ''),
             description=group_data.get('description', ''),
             leaderUserId=str(group_data.get('leaderUserId', '')),
+            leaderUsername=group_data.get('leaderUsername'),
             location=location,
             image=group_data.get('image'),
+            meetingConsistency=group_data.get('meetingConsistency'),
+            status=group_data.get('status'),
+            meetingDays=group_data.get('meetingDays', []),
+            meetingStartTime=self._parse_datetime(group_data.get('meetingStartTime')) if group_data.get('meetingStartTime') else None,
+            meetingEndTime=self._parse_datetime(group_data.get('meetingEndTime')) if group_data.get('meetingEndTime') else None,
+            genderFocus=group_data.get('genderFocus'),
+            demographic=group_data.get('demographic'),
+            groupType=group_data.get('groupType'),
+            meetingFormat=group_data.get('meetingFormat'),
             createdAt=self._parse_datetime(group_data.get('createdAt')),
             updatedAt=self._parse_datetime(group_data.get('updatedAt'))
         )

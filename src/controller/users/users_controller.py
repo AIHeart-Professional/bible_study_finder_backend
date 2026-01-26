@@ -95,18 +95,18 @@ class UsersController:
                 token=None
             )
     
-    async def get_user(self, username: str) -> get_user_response:
+    async def get_user(self, email: str) -> get_user_response:
         """
-        Get user information by username.
+        Get user information by email.
         
         Args:
-            username: User's username
+            email: User's email
             
         Returns:
             get_user_response object
         """
         try:
-            success, message, user = await self.users_service.get_user(username)
+            success, message, user = await self.users_service.get_user(email)
             return get_user_response(user=user, message=message)
         except Exception as e:
             self.logger.error(f"Error in get_user controller: {e}")

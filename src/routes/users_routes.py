@@ -64,18 +64,18 @@ async def login_user(request: login_user_request):
 
 
 @router.get("/get_user", response_model=get_user_response)
-async def get_user(username: str = Query(..., description="The username of the user to retrieve")):
+async def get_user(email: str = Query(..., description="The email of the user to retrieve")):
     """
-    Get user information by username.
+    Get user information by email.
     
     Query Parameters:
-        username: The username of the user to retrieve
+        email: The email of the user to retrieve
     
     Returns:
         get_user_response with user information
     """
     controller = UsersController()
-    return await controller.get_user(username=username)
+    return await controller.get_user(email=email)
 
 
 @router.post("/register_fcm_token", response_model=register_fcm_token_response)

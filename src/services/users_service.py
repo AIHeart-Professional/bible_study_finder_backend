@@ -178,18 +178,18 @@ class UsersService:
             self.logger.error(f"Error during login: {e}")
             return False, f"Error during login: {str(e)}", None, None
     
-    async def get_user(self, username: str) -> tuple[bool, str, Optional[User]]:
+    async def get_user(self, email: str) -> tuple[bool, str, Optional[User]]:
         """
-        Get user information by username.
+        Get user information by email.
         
         Args:
-            username: User's username
+            email: User's email
             
         Returns:
             Tuple of (success: bool, message: str, user: Optional[User])
         """
         try:
-            user_data = await self.users_database.get_user_by_username(username)
+            user_data = await self.users_database.get_user_by_email(email)
             if not user_data:
                 return False, "User not found", None
             

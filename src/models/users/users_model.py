@@ -40,7 +40,7 @@ class login_user_response(BaseModel):
 
 class get_user_request(BaseModel):
     """Model for getting user information."""
-    username: str
+    email: str
 
 class get_user_response(BaseModel):
     """Model for user information response."""

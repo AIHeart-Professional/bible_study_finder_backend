@@ -60,8 +60,18 @@ class Group(BaseModel):
     name: str
     description: str
     leaderUserId: str  # UUID public_id
+    leaderUsername: Optional[str] = None  # Leader's username
     location: Location
     image: Optional[str] = None
+    meetingConsistency: Optional[str] = None  # daily, weekly, monthly, etc.
+    status: Optional[str] = None  # active, cancelled, paused, etc.
+    meetingDays: Optional[List[str]] = None  # [monday, tuesday, wednesday...]
+    meetingStartTime: Optional[datetime] = None  # YYYY-MM-DD HH:mm:ss+ZZ
+    meetingEndTime: Optional[datetime] = None  # YYYY-MM-DD HH:mm:ss+ZZ
+    genderFocus: Optional[str] = None  # men, women, mixed, etc.
+    demographic: Optional[str] = None  # young_adults, adults, seniors, etc.
+    groupType: Optional[str] = None  # bible_study, prayer, fellowship, etc.
+    meetingFormat: Optional[str] = None  # in_person, online, hybrid
     createdAt: datetime
     updatedAt: datetime
 
@@ -72,7 +82,15 @@ class CreateGroupRequest(BaseModel):
     description: str
     leaderUserId: str  # public_id (UUID) of the leader
     location: Location
-    image: Optional[str] = None
+    meetingStartTime: Optional[datetime] = None
+    meetingEndTime: Optional[datetime] = None
+    genderFocus: Optional[str] = None  # enum: gender_focus
+    meetingDays: Optional[List[str]] = None  # enum: days (array)
+    demographic: Optional[str] = None  # enum: demographic
+    groupType: Optional[str] = None  # enum: group_types
+    meetingConsistency: Optional[str] = None  # enum: meeting_consistency
+    meetingFormat: Optional[str] = None  # enum: meeting_type
+    status: Optional[str] = None  # enum: status
 
 class InitializeGroupRequest(BaseModel):
     """Model for initializing a group."""
