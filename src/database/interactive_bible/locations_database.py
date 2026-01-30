@@ -14,6 +14,7 @@ class LocationsDatabase:
 	async def get_all_locations(self) -> List[dict]:
 		"""
 		Get all locations grouped by place name with aggregated verse_ids.
+		Only includes locations with confidence >= 400.
 		
 		Returns:
 			List of location dictionaries with id, name, lat, lng, verses
@@ -37,6 +38,7 @@ class LocationsDatabase:
 				WHERE name IS NOT NULL
 					AND latitude IS NOT NULL
 					AND longitude IS NOT NULL
+					AND confidence >= 400
 				GROUP BY name, latitude, longitude
 				ORDER BY name
 			"""
@@ -73,6 +75,7 @@ class LocationsDatabase:
 		"""
 		Get locations from a specific chapter, ranked by confidence.
 		Returns only rank #1 (highest confidence) location for each verse.
+		Only includes locations with confidence >= 400.
 		
 		Args:
 			book: Book name (e.g., 'Mark')
@@ -101,7 +104,7 @@ class LocationsDatabase:
 						confidence,
 						ROW_NUMBER() OVER (PARTITION BY verse ORDER BY confidence DESC) as rank
 					FROM bible_locations
-					WHERE book = %s AND chapter = %s
+					WHERE book = %s AND chapter = %s AND confidence >= 400
 				)
 				SELECT 
 					verse_id,
@@ -148,13 +151,15 @@ class LocationsDatabase:
 		"""
 		Get all character names from a specific chapter.
 		Finds characters by matching book and chapter in verse_characters table.
+		Also joins with verse_dialogue to get textbox field if available.
 		
 		Args:
 			book: Book name (e.g., 'Mark')
 			chapter: Chapter number
 		
 		Returns:
-			List of character dictionaries with name, book, chapter, verse, longitude, latitude
+			List of character dictionaries with name, book, chapter, verse, 
+			longitude, latitude, animation fields, and optional textbox
 		"""
 		self.logger.debug(f"get_characters_from_chapter called with book={book}, chapter={chapter}")
 		
@@ -172,11 +177,20 @@ class LocationsDatabase:
 					vc.chapter,
 					vc.verse,
 					vc.longitude,
-					vc.latitude
+					vc.latitude,
+					vc.appear_offset_ms,
+					vc.travel_duration_ms,
+					vc.ease,
+					vd.textbox
 				FROM verse_characters vc
 				JOIN bible_characters bc ON vc.character_id = bc.id
+				LEFT JOIN verse_dialogue vd ON 
+					vd.book = vc.book AND 
+					vd.chapter = vc.chapter AND 
+					vd.verse = vc.verse AND 
+					vd.character_id = vc.character_id
 				WHERE vc.book = %s AND vc.chapter = %s
-				ORDER BY vc.verse, bc.name
+				ORDER BY vc.verse, vd.display_order, bc.name
 			"""
 			
 			cursor.execute(query, (book, chapter))
@@ -184,17 +198,7 @@ class LocationsDatabase:
 			
 			self.logger.debug(f"Query returned {len(results)} characters")
 			
-			characters = []
-			for row in results:
-				character = {
-					'name': row['name'],
-					'book': row['book'],
-					'chapter': int(row['chapter']),
-					'verse': int(row['verse']),
-					'longitude': float(row['longitude']) if row['longitude'] is not None else 0.0,
-					'latitude': float(row['latitude']) if row['latitude'] is not None else 0.0
-				}
-				characters.append(character)
+			characters = self._format_character_rows(results)
 			
 			self.logger.info(f"Successfully retrieved {len(characters)} characters from {book} chapter {chapter}")
 			return characters
@@ -208,10 +212,55 @@ class LocationsDatabase:
 				PostgresConnection.return_connection(connection)
 				self.logger.debug("Connection returned to pool")
 	
+	def _format_character_rows(self, results: List[dict]) -> List[dict]:
+		"""
+		Format character result rows into dictionaries.
+		
+		Args:
+			results: List of database row results
+		
+		Returns:
+			List of formatted character dictionaries
+		"""
+		characters = []
+		for row in results:
+			character = self._format_single_character(row)
+			characters.append(character)
+		return characters
+	
+	def _format_single_character(self, row: dict) -> dict:
+		"""
+		Format a single character row into a dictionary.
+		
+		Args:
+			row: Database row result
+		
+		Returns:
+			Formatted character dictionary
+		"""
+		character = {
+			'name': row['name'],
+			'book': row['book'],
+			'chapter': int(row['chapter']),
+			'verse': int(row['verse']),
+			'longitude': float(row['longitude']) if row['longitude'] is not None else 0.0,
+			'latitude': float(row['latitude']) if row['latitude'] is not None else 0.0,
+			'appear_offset_ms': int(row['appear_offset_ms']) if row['appear_offset_ms'] is not None else 0,
+			'travel_duration_ms': int(row['travel_duration_ms']) if row['travel_duration_ms'] is not None else 800,
+			'ease': row['ease'] if row['ease'] is not None else 'ease-out'
+		}
+		
+		# Only include textbox if it exists in the verse_dialog table
+		if row.get('textbox') is not None:
+			character['textbox'] = row['textbox']
+		
+		return character
+	
 	async def get_characters_from_verse(self, book: str, chapter: int, verse: int) -> List[dict]:
 		"""
 		Get all character names from a specific verse.
 		Finds characters by matching exact book, chapter, and verse in verse_characters table.
+		Also joins with verse_dialogue to get textbox field if available.
 		
 		Args:
 			book: Book name (e.g., 'Mark')
@@ -219,7 +268,8 @@ class LocationsDatabase:
 			verse: Verse number
 		
 		Returns:
-			List of character dictionaries with name, book, chapter, verse, longitude, latitude
+			List of character dictionaries with name, book, chapter, verse, 
+			longitude, latitude, animation fields, and optional textbox
 		"""
 		self.logger.debug(f"get_characters_from_verse called with book={book}, chapter={chapter}, verse={verse}")
 		
@@ -237,11 +287,20 @@ class LocationsDatabase:
 					vc.chapter,
 					vc.verse,
 					vc.longitude,
-					vc.latitude
+					vc.latitude,
+					vc.appear_offset_ms,
+					vc.travel_duration_ms,
+					vc.ease,
+					vd.textbox
 				FROM verse_characters vc
 				JOIN bible_characters bc ON vc.character_id = bc.id
+				LEFT JOIN verse_dialogue vd ON 
+					vd.book = vc.book AND 
+					vd.chapter = vc.chapter AND 
+					vd.verse = vc.verse AND 
+					vd.character_id = vc.character_id
 				WHERE vc.book = %s AND vc.chapter = %s AND vc.verse = %s
-				ORDER BY bc.name
+				ORDER BY vd.display_order, bc.name
 			"""
 			
 			cursor.execute(query, (book, chapter, verse))
@@ -249,17 +308,7 @@ class LocationsDatabase:
 			
 			self.logger.debug(f"Query returned {len(results)} characters")
 			
-			characters = []
-			for row in results:
-				character = {
-					'name': row['name'],
-					'book': row['book'],
-					'chapter': int(row['chapter']),
-					'verse': int(row['verse']),
-					'longitude': float(row['longitude']) if row['longitude'] is not None else 0.0,
-					'latitude': float(row['latitude']) if row['latitude'] is not None else 0.0
-				}
-				characters.append(character)
+			characters = self._format_character_rows(results)
 			
 			self.logger.info(f"Successfully retrieved {len(characters)} characters from {book} {chapter}:{verse}")
 			return characters

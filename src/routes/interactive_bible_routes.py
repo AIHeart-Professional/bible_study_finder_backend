@@ -45,13 +45,15 @@ async def get_bible_characters_from_chapter(
 	"""
 	Get all character names from a specific chapter.
 	Finds characters by matching book and chapter in verse_characters table.
+	Also joins with verse_dialogue to include textbox field when available.
 	
 	Query Parameters:
 		book: Book name (e.g., 'Mark')
 		chapter: Chapter number
 	
 	Returns:
-		List of ChapterCharacterResponse objects with name, book, chapter, verse, longitude, latitude
+		List of ChapterCharacterResponse objects with name, book, chapter, verse, 
+		longitude, latitude, appear_offset_ms, travel_duration_ms, ease, textbox (optional)
 	"""
 	results = await LocationsController().get_characters_from_chapter(book, chapter)
 	return results
@@ -65,6 +67,7 @@ async def get_bible_characters_from_verse(
 	"""
 	Get all character names from a specific verse.
 	Finds characters by matching exact book, chapter, and verse in verse_characters table.
+	Also joins with verse_dialogue to include textbox field when available.
 	
 	Query Parameters:
 		book: Book name (e.g., 'Mark')
@@ -72,7 +75,8 @@ async def get_bible_characters_from_verse(
 		verse: Verse number
 	
 	Returns:
-		List of VerseCharacterResponse objects with name, book, chapter, verse, longitude, latitude
+		List of VerseCharacterResponse objects with name, book, chapter, verse, 
+		longitude, latitude, appear_offset_ms, travel_duration_ms, ease, textbox (optional)
 	"""
 	results = await LocationsController().get_characters_from_verse(book, chapter, verse)
 	return results

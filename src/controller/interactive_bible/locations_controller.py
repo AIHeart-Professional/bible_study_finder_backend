@@ -87,7 +87,8 @@ class LocationsController:
 			chapter: Chapter number
 		
 		Returns:
-			List of ChapterCharacterResponse objects with name, book, chapter, verse, longitude, latitude
+			List of ChapterCharacterResponse objects with name, book, chapter, verse,
+			longitude, latitude, appear_offset_ms, travel_duration_ms, ease, textbox
 		"""
 		self.logger.debug(f"get_characters_from_chapter called with book={book}, chapter={chapter}")
 		
@@ -95,14 +96,7 @@ class LocationsController:
 			characters_data = await self.locations_service.get_characters_from_chapter(book, chapter)
 			
 			characters = [
-				ChapterCharacterResponse(
-					name=char['name'],
-					book=char['book'],
-					chapter=char['chapter'],
-					verse=char['verse'],
-					longitude=char['longitude'],
-					latitude=char['latitude']
-				)
+				self._build_chapter_character_response(char)
 				for char in characters_data
 			]
 			
@@ -112,6 +106,29 @@ class LocationsController:
 		except Exception as e:
 			self.logger.error(f"Error getting characters from chapter: {e}", exc_info=True)
 			return []
+	
+	def _build_chapter_character_response(self, char: dict) -> ChapterCharacterResponse:
+		"""
+		Build a ChapterCharacterResponse from character data.
+		
+		Args:
+			char: Character dictionary from service layer
+		
+		Returns:
+			ChapterCharacterResponse object
+		"""
+		return ChapterCharacterResponse(
+			name=char['name'],
+			book=char['book'],
+			chapter=char['chapter'],
+			verse=char['verse'],
+			longitude=char['longitude'],
+			latitude=char['latitude'],
+			appear_offset_ms=char['appear_offset_ms'],
+			travel_duration_ms=char['travel_duration_ms'],
+			ease=char['ease'],
+			textbox=char.get('textbox')
+		)
 	
 	async def get_characters_from_verse(self, book: str, chapter: int, verse: int) -> List[VerseCharacterResponse]:
 		"""
@@ -123,7 +140,8 @@ class LocationsController:
 			verse: Verse number
 		
 		Returns:
-			List of VerseCharacterResponse objects with name, book, chapter, verse, longitude, latitude
+			List of VerseCharacterResponse objects with name, book, chapter, verse,
+			longitude, latitude, appear_offset_ms, travel_duration_ms, ease, textbox
 		"""
 		self.logger.debug(f"get_characters_from_verse called with book={book}, chapter={chapter}, verse={verse}")
 		
@@ -131,14 +149,7 @@ class LocationsController:
 			characters_data = await self.locations_service.get_characters_from_verse(book, chapter, verse)
 			
 			characters = [
-				VerseCharacterResponse(
-					name=char['name'],
-					book=char['book'],
-					chapter=char['chapter'],
-					verse=char['verse'],
-					longitude=char['longitude'],
-					latitude=char['latitude']
-				)
+				self._build_verse_character_response(char)
 				for char in characters_data
 			]
 			
@@ -148,4 +159,27 @@ class LocationsController:
 		except Exception as e:
 			self.logger.error(f"Error getting characters from verse: {e}", exc_info=True)
 			return []
+	
+	def _build_verse_character_response(self, char: dict) -> VerseCharacterResponse:
+		"""
+		Build a VerseCharacterResponse from character data.
+		
+		Args:
+			char: Character dictionary from service layer
+		
+		Returns:
+			VerseCharacterResponse object
+		"""
+		return VerseCharacterResponse(
+			name=char['name'],
+			book=char['book'],
+			chapter=char['chapter'],
+			verse=char['verse'],
+			longitude=char['longitude'],
+			latitude=char['latitude'],
+			appear_offset_ms=char['appear_offset_ms'],
+			travel_duration_ms=char['travel_duration_ms'],
+			ease=char['ease'],
+			textbox=char.get('textbox')
+		)
 
