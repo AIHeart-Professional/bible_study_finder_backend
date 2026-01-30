@@ -10,6 +10,7 @@ pydantic>=2.5.0
 
 # HTTP client for external API calls
 requests>=2.31.0
+httpx>=0.25.0
 
 # Environment and configuration
 python-dotenv>=1.0.0
