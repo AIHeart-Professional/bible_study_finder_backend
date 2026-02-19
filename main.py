@@ -5,7 +5,7 @@ Main entry point for the Bible Study Finder Backend API.
 import uvicorn
 from cors_config import setup_cors
 from config import config
-from src.routes import bible_routes, users_routes, groups_routes, roles_routes, interactive_bible_routes
+from src.routes import bible_routes, users_routes, groups_routes, roles_routes, interactive_bible_routes, notes_routes
 from src.utils.logger import BibleStudyLogger, get_logger
 from fastapi import FastAPI
 
@@ -29,6 +29,7 @@ app.include_router(users_routes.router, prefix="/users", tags=["users"])
 app.include_router(groups_routes.router, prefix="/groups", tags=["groups"])
 app.include_router(roles_routes.router, prefix="/roles", tags=["roles"])
 app.include_router(interactive_bible_routes.router, prefix="/interactive_bible", tags=["interactive_bible"])
+app.include_router(notes_routes.router, prefix="/notes", tags=["notes"])
 
 # Setup CORS
 setup_cors(app)

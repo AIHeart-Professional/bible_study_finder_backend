@@ -1,0 +1,20 @@
+"""Notes and folders models."""
+from src.models.notes.notes_model import (
+    Note,
+    FolderInfo,
+    Folder,
+    GetNotesResponse,
+    GetNoteResponse,
+    CreateNoteRequest,
+    CreateNoteResponse,
+    UpdateNoteRequest,
+    UpdateNoteResponse,
+    DeleteNoteResponse,
+    GetFoldersResponse,
+    GetFolderResponse,
+    CreateFolderRequest,
+    CreateFolderResponse,
+    UpdateFolderRequest,
+    UpdateFolderResponse,
+    DeleteFolderResponse,
+)

@@ -74,7 +74,12 @@ class SupabaseClient:
         # Add filters
         if filters:
             for column, value in filters.items():
-                if isinstance(value, str) and any(op in value for op in ['eq.', 'neq.', 'gt.', 'gte.', 'lt.', 'lte.', 'like.', 'ilike.', 'in.']):
+                if value is None or value == "is.null":
+                    url += f"&{column}=is.null"
+                elif isinstance(value, list):
+                    in_val = "in.(" + ",".join(str(v) for v in value) + ")"
+                    url += f"&{column}={in_val}"
+                elif isinstance(value, str) and any(op in value for op in ['eq.', 'neq.', 'gt.', 'gte.', 'lt.', 'lte.', 'like.', 'ilike.', 'in.']):
                     url += f"&{column}={value}"
                 else:
                     url += f"&{column}=eq.{value}"
@@ -121,7 +126,8 @@ class SupabaseClient:
             Inserted record if return_data is True, else None
         """
         self._logger.debug(f"INSERT into {table}")
-        
+        # Omit null values so PostgREST/DB use column defaults (avoids 409 in some setups)
+        payload = {k: v for k, v in data.items() if v is not None}
         url = f"{self.rest_url}/{table}"
         prefer = "return=representation" if return_data else "return=minimal"
         
@@ -130,7 +136,7 @@ class SupabaseClient:
                 response = await client.post(
                     url, 
                     headers=self._get_headers(prefer),
-                    json=data
+                    json=payload
                 )
                 response.raise_for_status()
                 
@@ -175,7 +181,9 @@ class SupabaseClient:
         # Add filters
         filter_parts = []
         for column, value in filters.items():
-            if isinstance(value, str) and any(op in value for op in ['eq.', 'neq.', 'gt.', 'gte.', 'lt.', 'lte.']):
+            if value is None or value == "is.null":
+                filter_parts.append(f"{column}=is.null")
+            elif isinstance(value, str) and any(op in value for op in ['eq.', 'neq.', 'gt.', 'gte.', 'lt.', 'lte.']):
                 filter_parts.append(f"{column}={value}")
             else:
                 filter_parts.append(f"{column}=eq.{value}")
@@ -233,7 +241,9 @@ class SupabaseClient:
         # Add filters (required for DELETE)
         filter_parts = []
         for column, value in filters.items():
-            if isinstance(value, str) and any(op in value for op in ['eq.', 'neq.', 'gt.', 'gte.', 'lt.', 'lte.']):
+            if value is None or value == "is.null":
+                filter_parts.append(f"{column}=is.null")
+            elif isinstance(value, str) and any(op in value for op in ['eq.', 'neq.', 'gt.', 'gte.', 'lt.', 'lte.']):
                 filter_parts.append(f"{column}={value}")
             else:
                 filter_parts.append(f"{column}=eq.{value}")
